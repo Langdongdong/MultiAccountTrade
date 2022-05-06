@@ -1,1 +1,1 @@
-# MultiAccountTrading
+# MultiAccountTrade
