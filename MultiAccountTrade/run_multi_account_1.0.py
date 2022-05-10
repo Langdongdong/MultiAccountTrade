@@ -120,4 +120,4 @@ def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
     return subscribes, queue
 
 if __name__ == "__main__":
-    pass
+    asyncio.run(run())

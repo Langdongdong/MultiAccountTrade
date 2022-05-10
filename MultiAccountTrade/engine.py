@@ -365,7 +365,7 @@ class BackupEngine(BaseEngine):
     def get_backup_file_path(self, gateway_name: str) -> str:
         return self.backup_file_paths.get(gateway_name)
 
-    def add_backup_data(self, gateway_name: str, data: DataFrame, ) -> None:
+    def add_backup_data(self, gateway_name: str, data: DataFrame) -> None:
         self.backup_data[gateway_name] = data
 
     def get_backup_data(self, gateway_name: str) -> Optional[Any]:
