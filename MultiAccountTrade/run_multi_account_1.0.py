@@ -2,7 +2,7 @@ import asyncio, pathlib, pandas, sys, re
 from typing import Dict, Set, Tuple
 
 from pandas import DataFrame
-from constant import OrderRequest
+from object import OrderRequest
 from engine import BackupEngine, MAEngine
 
 from vnpy_ctp import CtpGateway
@@ -81,8 +81,6 @@ def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
     subscribes: Set[str] = set()
     queue: asyncio.Queue = asyncio.Queue()
 
-    backup_engine: BackupEngine = engine.backup_engine
-
     order_dir_path = pathlib.Path(FILE_SETTING["ORDER_DIR_PATH"])
     backup_dir_path = pathlib.Path(FILE_SETTING["BACKUP_DIR_PATH"])
     if not backup_dir_path.exists():
@@ -100,13 +98,13 @@ def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
     for gateway in engine.get_all_gateways():
         order_file_path = order_dir_path.joinpath(f"{file_date}_{gateway.gateway_name}.csv")
         backup_file_path = backup_dir_path.joinpath(f"{file_date}_{gateway.gateway_name}_backup.csv")
-        backup_engine.add_backup_file_path(gateway.gateway_name, backup_file_path)
+        engine.add_backup_file_path(gateway.gateway_name, backup_file_path)
 
-        requests: DataFrame = backup_engine.load_backup_file_path(gateway.gateway_name)
+        requests: DataFrame = engine.load_backup_data(gateway.gateway_name)
         if requests is None:
             requests = pandas.read_csv(order_file_path)
-            backup_engine.add_backup_data(gateway.gateway_name, requests)
-            backup_engine.backup(gateway.gateway_name)
+            engine.add_backup_data(gateway.gateway_name, requests)
+            engine.backup(gateway.gateway_name)
 
         if is_night_period():
             requests = requests[requests["ContractID"].apply(lambda x:(re.match("[^0-9]*", x, re.I).group().upper() not in AM_SYMBOL))]

@@ -32,22 +32,21 @@ class TWAP():
             backup(
                 self.engine,
                 self.gateway_name,
-                self.vt_symbol,
-                self.order_mode,
-                self.volume - self.traded_volume
+                self.request,
+                self.request.volume - self.traded_volume
                 )
             
     def send_order(self) -> List[str]:
         volume = min(self.twap_volume, self.request.volume - self.traded_volume)
 
         if self.request.order_mode == OrderMode.BUY:
-            self.vt_orderids = self.engine.buy(self.vt_symbol, volume, self.gateway_name)
+            self.vt_orderids = self.engine.buy(self.request.vt_symbol, volume, self.gateway_name)
         elif self.request.order_mode == OrderMode.SELL:
-            self.vt_orderids = self.engine.sell(self.vt_symbol, volume, self.gateway_name)
+            self.vt_orderids = self.engine.sell(self.request.vt_symbol, volume, self.gateway_name)
         elif self.request.order_mode == OrderMode.SHORT:
-            self.vt_orderids = self.engine.short(self.vt_symbol, volume, self.gateway_name)
+            self.vt_orderids = self.engine.short(self.request.vt_symbol, volume, self.gateway_name)
         elif self.request.order_mode == OrderMode.COVER:
-            self.vt_orderids = self.engine.cover(self.vt_symbol, volume, self.gateway_name)
+            self.vt_orderids = self.engine.cover(self.request.vt_symbol, volume, self.gateway_name)
 
     def cancel_active_orders(self) -> None:
         for vt_orderid in self.vt_orderids:
@@ -63,18 +62,14 @@ class TWAP():
         return max(float(math.floor(self.request.volume / (self.time / self.interval))), 1.0)
 
 
-def backup(engine: MAEngine, gateway_name: str, vt_symbol: str, order_mode: OrderMode, left_volume: float):
-    backup_engine: BackupEngine = engine.backup_engine
-    data: DataFrame = backup_engine.get_backup_data(gateway_name)
-
-    symbol: str = OrderRequest.convert_to_symbol(vt_symbol)
-    Op1, Op2 = OrderRequest.convert_to_order_mode(order_mode)
+def backup(engine: MAEngine, gateway_name: str, request: OrderRequest, left_volume: float):
+    data: DataFrame = engine.get_backup_data(gateway_name)
 
     idx = data.loc[
-        (data["ContractID"] == symbol) &
-        (data["Op1"] == Op1) &
-        (data["Op2"] == Op2)
+        (data["ContractID"] == request.ContractID) &
+        (data["Op1"] == request.Op1) &
+        (data["Op2"] == request.Op2)
     ].index.values[0]
     data.loc[idx, "Num"] = left_volume
 
-    backup_engine.backup(gateway_name)
+    engine.backup(gateway_name)

@@ -351,16 +351,13 @@ class BackupEngine(BaseEngine):
         self.backup_data: Dict[str, DataFrame]  = {}
         self.backup_file_paths: Dict[str, str] = {}
 
-    def add_function() -> None:
-        pass
-
-    def load_backup_file_path(self, gateway_name:str) -> Optional[DataFrame]:
-        file_path = self.get_backup_file_path(gateway_name)
-        if pathlib.Path(file_path).exists():
-            data = pandas.read_csv(file_path)
-            self.add_backup_data(gateway_name, data)
-            return data
-        return None
+    def add_function(self) -> None:
+        self.ma_engine.add_backup_file_path = self.add_backup_file_path
+        self.ma_engine.get_backup_file_path = self.get_backup_file_path
+        self.ma_engine.add_backup_data = self.add_backup_data
+        self.ma_engine.get_backup_data = self.get_backup_data
+        self.ma_engine.load_backup_data = self.load_backup_data
+        self.ma_engine.backup = self.backup
 
     def add_backup_file_path(self, gateway_name: str, file_path: str) -> None:
         self.backup_file_paths[gateway_name] = file_path
@@ -373,6 +370,14 @@ class BackupEngine(BaseEngine):
 
     def get_backup_data(self, gateway_name: str) -> Optional[Any]:
         return self.backup_data.get(gateway_name)
+
+    def load_backup_data(self, gateway_name:str) -> Optional[DataFrame]:
+        file_path = self.get_backup_file_path(gateway_name)
+        if pathlib.Path(file_path).exists():
+            data = pandas.read_csv(file_path)
+            self.add_backup_data(gateway_name, data)
+            return data
+        return None
 
     def backup(self, gateway_name: str) -> None:
         data: DataFrame = self.get_backup_data(gateway_name)
