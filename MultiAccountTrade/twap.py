@@ -1,8 +1,9 @@
 import asyncio, math
-from email.policy import default
-from typing import List, Dict
+from typing import Any, List, Dict
 
-from engine import MAEngine
+from pandas import DataFrame
+
+from engine import BackupEngine, MAEngine
 from constant import OrderMode, OrderRequest
 
 from vnpy.trader.object import TradeData
@@ -30,6 +31,13 @@ class TWAP():
             self.cancel_active_orders()
             await asyncio.sleep(1)
             self.update_traded_volume()
+            backup(
+                self.engine,
+                self.gateway_name,
+                self.vt_symbol,
+                self.order_mode,
+                self.volume - self.traded_volume
+                )
             
     def send_order(self) -> List[str]:
         volume = min(self.twap_volume, self.volume - self.traded_volume)
@@ -55,3 +63,19 @@ class TWAP():
 
     def get_twap_volume(self) -> float:
         return max(float(math.floor(self.volume / (self.time / self.interval))), 1.0)
+
+
+def backup(engine: BackupEngine, gateway_name: str, vt_symbol: str, order_mode: OrderMode, left_volume: float):
+    data: DataFrame = engine.get_backup_data(gateway_name)
+
+    symbol: str = OrderRequest.convert_to_symbol(vt_symbol)
+    Op1, Op2 = OrderRequest.convert_to_order_mode(order_mode)
+
+    idx = data.loc[
+        (data["ContractID"] == symbol) &
+        (data["Op1"] == Op1) &
+        (data["Op2"] == Op2)
+    ].index.values[0]
+    data.loc[idx, "Num"] = left_volume
+
+    engine.backup(gateway_name)

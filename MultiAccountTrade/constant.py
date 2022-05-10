@@ -1,4 +1,5 @@
 import enum, datetime
+from typing import Tuple
 from vnpy.trader.constant import Exchange
 
 DAY_START = datetime.time(8, 45)
@@ -102,7 +103,7 @@ class OrderRequest:
                 return OrderMode.SELL
 
     @classmethod
-    def convert_to_order_mode(self, order_mode: OrderMode) -> tuple:
+    def convert_to_order_mode(self, order_mode: OrderMode) -> Tuple[str, str]:
         if order_mode == OrderMode.BUY:
             return "Open", "Buy"
         elif order_mode == OrderMode.SHORT:

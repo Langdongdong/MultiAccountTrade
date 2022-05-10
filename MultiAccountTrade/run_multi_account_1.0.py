@@ -1,11 +1,10 @@
 import asyncio, pathlib, pandas, sys, re
-from typing import Dict, Optional, Set, Tuple
+from typing import Dict, Set, Tuple
 
 from pandas import DataFrame
-from constant import TWAP_SETTING, OrderMode, OrderRequest
-from engine import MAEngine
+from constant import OrderRequest
+from engine import BackupEngine, MAEngine
 
-from vnpy.trader.gateway import BaseGateway
 from vnpy_ctp import CtpGateway
 from vnpy_rohon import RohonGateway
 
@@ -83,7 +82,6 @@ def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
 
     order_dir_path = pathlib.Path(FILE_SETTING["ORDER_DIR_PATH"])
     backup_dir_path = pathlib.Path(FILE_SETTING["BACKUP_DIR_PATH"])
-
     if not backup_dir_path.exists():
         backup_dir_path.mkdir()
 
@@ -99,17 +97,19 @@ def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
     for gateway in engine.get_all_gateways():
         order_file_path = order_dir_path.joinpath(f"{file_date}_{gateway.gateway_name}.csv")
         backup_file_path = backup_dir_path.joinpath(f"{file_date}_{gateway.gateway_name}_backup.csv")
+        
+        backup_engine: BackupEngine = engine.get_engine("backup")
+        backup_engine.add_backup_file_path(gateway.gateway_name, backup_file_path)
 
-        if backup_file_path.exists():
-            requests = pandas.read_csv(backup_file_path)
-        else:
-            if order_file_path.exists():
-                requests = pandas.read_csv(order_file_path)
-                requests.to_csv(backup_file_path, index = False)
+        requests: DataFrame = backup_engine.load_backup_file_path(gateway.gateway_name)
+        if requests is None:
+            requests = pandas.read_csv(order_file_path)
+            backup_engine.add_backup_data(gateway.gateway_name, requests)
+            backup_engine.backup(gateway.gateway_name)
 
         if is_night_period():
             requests = requests[requests["ContractID"].apply(lambda x:(re.match("[^0-9]*", x, re.I).group().upper() not in AM_SYMBOL))]
-         
+        
         for row in requests.itertuples():
             if getattr(row, "Num") <= 0:
                 continue
@@ -117,7 +117,7 @@ def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
             queue.put_nowait((gateway.gateway_name, request))
 
         subscribes.update([OrderRequest.convert_to_vt_symbol(symbol) for symbol in requests["ContractID"].tolist()])
-        
+
     return subscribes, queue
 
 if __name__ == "__main__":

@@ -1,8 +1,12 @@
 
+from abc import ABC
+import pathlib
+from pandas import DataFrame
+import pandas
 from utility import get_df
 
 from copy import copy
-from typing import Dict, List, Optional, Sequence, Type
+from typing import Any, Dict, List, Optional, Sequence, Type
 from vnpy.event import Event, EventEngine
 from vnpy.trader.gateway import BaseGateway
 from vnpy.trader.constant import (
@@ -50,6 +54,8 @@ class MAEngine():
         self.positions: Dict[str, PositionData] = {}
         self.active_orders: Dict[str, OrderData] = {}
 
+        self.engines: Dict[str, BaseEngine] = {}
+
         self.event_engine = EventEngine()
         self.event_engine.start()
         self._register_process_event()
@@ -86,6 +92,10 @@ class MAEngine():
     def _add_subscribe_gateway(self) -> None:
         if self.susbcribe_gateway is None:
             self.susbcribe_gateway = self.get_all_gateways()[0]
+
+    def _add_engine(self, engine_class: Any) -> None:
+        engine: BaseEngine = engine_class()
+        self.engines[engine.engine_name] = engine
 
     def _connect(self, setting: Dict[str, str], gateway_name: str) -> None:
         gateway = self.get_gateway(gateway_name)
@@ -213,6 +223,9 @@ class MAEngine():
     def get_subscribe_gateway(self) -> Optional[BaseGateway]:
         return self.susbcribe_gateway
 
+    def get_engine(self, engine_name: str) -> Optional["BaseEngine"]:
+        return self.engines.get(engine_name)
+
     def get_tick(self, vt_symbol: str, use_df: bool = False) -> Optional[TickData]:
         return get_df(self.ticks.get(vt_symbol), use_df)
 
@@ -308,5 +321,57 @@ class MAEngine():
     def close(self) -> None:
         self.event_engine.stop()
 
+        for engine in self.engines.values():
+            engine.close()
+
         for gateway in self.gateways.values():
             gateway.close()
+
+
+class BaseEngine(ABC):
+    def __init__(self, engine_name: str) -> None:
+        self.engine_name = engine_name
+
+    def close(self) -> None:
+        pass
+
+
+class BackupEngine(BaseEngine):
+    def __init__(self) -> None:
+        super().__init__("backup")
+        self.backup_data: Dict[str, DataFrame]  = {}
+        self.backup_file_paths: Dict[str, str] = {}
+
+    def load_backup_file_path(self, gateway_name:str) -> Optional[DataFrame]:
+        file_path = self.get_backup_file_path(gateway_name)
+        if pathlib.Path(file_path).exists():
+            data = pandas.read_csv(file_path)
+            self.add_backup_data(gateway_name, data)
+            return data
+        return None
+
+    def add_backup_file_path(self, gateway_name: str, file_path: str) -> None:
+        self.backup_file_paths[gateway_name] = file_path
+    
+    def get_backup_file_path(self, gateway_name: str) -> str:
+        return self.backup_file_paths.get(gateway_name)
+
+    def add_backup_data(self, gateway_name: str, data: DataFrame, ) -> None:
+        self.backup_data[gateway_name] = data
+
+    def get_backup_data(self, gateway_name: str) -> Optional[Any]:
+        return self.backup_data.get(gateway_name)
+
+    def backup(self, gateway_name: str) -> None:
+        data: DataFrame = self.get_backup_data(gateway_name)
+        backup_file_path: str = self.get_backup_file_path(gateway_name)
+        data.to_csv(backup_file_path)
+
+    def close(self) -> None:
+        for gateway_name, data in self.backup_data:
+            data.to_csv(self.get_backup_file_path(gateway_name), index = False)
+
+
+class LogEngine(BaseEngine):
+    def __init__(self) -> None:
+        super().__init__("log")
