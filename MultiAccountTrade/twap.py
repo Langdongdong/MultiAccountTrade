@@ -66,7 +66,7 @@ class TWAP():
 
 
 def backup(engine: MAEngine, gateway_name: str, vt_symbol: str, order_mode: OrderMode, left_volume: float):
-    backup_engine: BackupEngine = engine.get_engine("backup")
+    backup_engine: BackupEngine = engine.backup_engine
     data: DataFrame = backup_engine.get_backup_data(gateway_name)
 
     symbol: str = OrderRequest.convert_to_symbol(vt_symbol)

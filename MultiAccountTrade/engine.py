@@ -64,8 +64,8 @@ class MAEngine():
         self.event_engine.start()
 
         self.engines: Dict[str, BaseEngine] = {}
-        self._add_engine(BackupEngine)
-        self._add_engine(LogEngine)
+        self._add_engine(self, BackupEngine)
+        self._add_engine(self, LogEngine)
 
         self.gateways: Dict[str, BaseGateway] = {}
         self.gateway_classes = Dict[str, Type[BaseGateway]] = {}
@@ -100,9 +100,10 @@ class MAEngine():
         if self.susbcribe_gateway is None:
             self.susbcribe_gateway = self.get_all_gateways()[0]
 
-    def _add_engine(self, engine_class: Any) -> None:
-        engine: BaseEngine = engine_class()
+    def _add_engine(self, engine_class: Any) -> "BaseEngine":
+        engine: BaseEngine = engine_class(self)
         self.engines[engine.engine_name] = engine
+        return engine
 
     def _connect(self, setting: Dict[str, str], gateway_name: str) -> None:
         gateway = self.get_gateway(gateway_name)
@@ -336,18 +337,22 @@ class MAEngine():
 
 
 class BaseEngine(ABC):
-    def __init__(self, engine_name: str) -> None:
+    def __init__(self, ma_engine:MAEngine, engine_name: str) -> None:
+        self.ma_engine = ma_engine
         self.engine_name = engine_name
 
     def close(self) -> None:
         pass
-
+    
 
 class BackupEngine(BaseEngine):
-    def __init__(self) -> None:
-        super().__init__("backup")
+    def __init__(self, ma_engine: MAEngine) -> None:
+        super().__init__(ma_engine, "backup")
         self.backup_data: Dict[str, DataFrame]  = {}
         self.backup_file_paths: Dict[str, str] = {}
+
+    def add_function() -> None:
+        pass
 
     def load_backup_file_path(self, gateway_name:str) -> Optional[DataFrame]:
         file_path = self.get_backup_file_path(gateway_name)
@@ -380,15 +385,24 @@ class BackupEngine(BaseEngine):
 
 
 class LogEngine(BaseEngine):
-    def __init__(self) -> None:
-        super().__init__("log")
+    def __init__(self, ma_engine: MAEngine) -> None:
+        super().__init__(ma_engine, "log")
 
         self.logger: Logger = logging.getLogger("MAEngine")
         self.formatter = logging.Formatter("%(asctime)s  %(levelname)s: %(message)s")
 
         self.add_console_handler()
         self.add_file_handler()
-    
+
+        self.add_function()
+
+    def add_function(self) -> None:
+        self.ma_engine.debug = self.logger.debug
+        self.ma_engine.info = self.logger.info
+        self.ma_engine.warning = self.logger.warning
+        self.ma_engine.error = self.logger.error
+        self.ma_engine.critical = self.logger.critical
+
     def add_console_handler(self) -> None:
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.DEBUG)
@@ -402,3 +416,5 @@ class LogEngine(BaseEngine):
         file_handler.setLevel(logging.INFO)
         file_handler.setFormatter(self.formatter)
         self.logger.addHandler(file_handler)
+
+    
