@@ -65,8 +65,9 @@ class TWAP():
         return max(float(math.floor(self.volume / (self.time / self.interval))), 1.0)
 
 
-def backup(engine: BackupEngine, gateway_name: str, vt_symbol: str, order_mode: OrderMode, left_volume: float):
-    data: DataFrame = engine.get_backup_data(gateway_name)
+def backup(engine: MAEngine, gateway_name: str, vt_symbol: str, order_mode: OrderMode, left_volume: float):
+    backup_engine: BackupEngine = engine.get_engine("backup")
+    data: DataFrame = backup_engine.get_backup_data(gateway_name)
 
     symbol: str = OrderRequest.convert_to_symbol(vt_symbol)
     Op1, Op2 = OrderRequest.convert_to_order_mode(order_mode)
@@ -78,4 +79,4 @@ def backup(engine: BackupEngine, gateway_name: str, vt_symbol: str, order_mode: 
     ].index.values[0]
     data.loc[idx, "Num"] = left_volume
 
-    engine.backup(gateway_name)
+    backup_engine.backup(gateway_name)

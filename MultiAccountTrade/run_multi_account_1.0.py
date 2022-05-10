@@ -22,6 +22,7 @@ FILE_SETTING = {
     "ORDER_DIR_PATH": "",
     "BACKUP_DIR_PATH": "",
     "POSITION_DIR_PATH": "",
+    "LOG_DIR_PATH": ""
 }
 
 ACCOUNT_SETTING = {

@@ -1,6 +1,11 @@
 
 from abc import ABC
+from datetime import datetime
+from fileinput import filename
+from logging import FileHandler, Logger
+import logging
 import pathlib
+from numpy import longlong
 from pandas import DataFrame
 import pandas
 from utility import get_df
@@ -54,11 +59,13 @@ class MAEngine():
         self.positions: Dict[str, PositionData] = {}
         self.active_orders: Dict[str, OrderData] = {}
 
-        self.engines: Dict[str, BaseEngine] = {}
-
         self.event_engine = EventEngine()
-        self.event_engine.start()
         self._register_process_event()
+        self.event_engine.start()
+
+        self.engines: Dict[str, BaseEngine] = {}
+        self._add_engine(BackupEngine)
+        self._add_engine(LogEngine)
 
         self.gateways: Dict[str, BaseGateway] = {}
         self.gateway_classes = Dict[str, Type[BaseGateway]] = {}
@@ -375,3 +382,23 @@ class BackupEngine(BaseEngine):
 class LogEngine(BaseEngine):
     def __init__(self) -> None:
         super().__init__("log")
+
+        self.logger: Logger = logging.getLogger("MAEngine")
+        self.formatter = logging.Formatter("%(asctime)s  %(levelname)s: %(message)s")
+
+        self.add_console_handler()
+        self.add_file_handler()
+    
+    def add_console_handler(self) -> None:
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.DEBUG)
+        console_handler.setFormatter(self.formatter)
+        self.logger.addHandler(console_handler)
+    
+    def add_file_handler(self) -> None:
+        file_name = f"{datetime.now().strftime('%Y%m%d')}.log"
+        file_path = pathlib.Path(FILE_SETTING["LOG_DIR_PATH"]).joinpath(file_name)
+        file_handler = logging.FileHandler(file_path, mode="a", encoding="utf-8")
+        file_handler.setLevel(logging.INFO)
+        file_handler.setFormatter(self.formatter)
+        self.logger.addHandler(file_handler)
