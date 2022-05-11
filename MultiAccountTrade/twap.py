@@ -1,4 +1,5 @@
 import asyncio, math
+from time import sleep
 from typing import Any, List, Dict
 
 from pandas import DataFrame
@@ -22,6 +23,8 @@ class TWAP():
         self.traded_volume: float = 0
         self.twap_volume: float = self.get_twap_volume()
 
+        self.engine.debug(f"Excecute TWAP {self.request.vt_symbol} {self.request.order_mode.value} {self.request.volume}")
+
     async def run(self) -> None:
         while self.traded_volume < self.request.volume:
             self.send_order()
@@ -35,10 +38,11 @@ class TWAP():
                 self.request,
                 self.request.volume - self.traded_volume
                 )
+        
+        self.engine.debug(f"Complete TWAP {self.request.vt_symbol}")
             
     def send_order(self) -> List[str]:
         volume = min(self.twap_volume, self.request.volume - self.traded_volume)
-
         if self.request.order_mode == OrderMode.BUY:
             self.vt_orderids = self.engine.buy(self.request.vt_symbol, volume, self.gateway_name)
         elif self.request.order_mode == OrderMode.SELL:
@@ -48,15 +52,21 @@ class TWAP():
         elif self.request.order_mode == OrderMode.COVER:
             self.vt_orderids = self.engine.cover(self.request.vt_symbol, volume, self.gateway_name)
 
+        self.engine.debug(f"Send order {self.request.vt_symbol} {self.request.order_mode.value} {volume}" )
+
     def cancel_active_orders(self) -> None:
         for vt_orderid in self.vt_orderids:
             self.engine.cancel_active_order(vt_orderid)
+
+        self.engine.debug(f"Cancel active order {self.request.vt_symbol}")
 
     def update_traded_volume(self) -> None:
         trades: List[TradeData] = self.engine.get_all_trades()
         for trade in trades:
             if trade.orderid in self.vt_orderids:
                 self.traded_volume += trade.volume
+
+        self.engine.debug(f"Update traded order {self.request.vt_symbol} traded {self.traded_volume}")
 
     def get_twap_volume(self) -> float:
         return max(float(math.floor(self.request.volume / (self.time / self.interval))), 1.0)
@@ -73,3 +83,5 @@ def backup(engine: MAEngine, gateway_name: str, request: OrderRequest, left_volu
     data.loc[idx, "Num"] = left_volume
 
     engine.backup(gateway_name)
+
+    engine.debug(f"Backup {request.vt_symbol} {request.order_mode.value} left {left_volume}")

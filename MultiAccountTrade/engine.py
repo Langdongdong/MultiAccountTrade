@@ -207,7 +207,7 @@ class MAEngine():
 
     def _process_contract_event(self, event: Event) -> None:
         contract: ContractData = event.data
-        if not self.get_contract(contract.vt_symbol):
+        if self.get_contract(contract.vt_symbol) is not None:
             self.contracts[contract.vt_symbol] = contract
 
     def _process_account_event(self, event: Event) -> None:
