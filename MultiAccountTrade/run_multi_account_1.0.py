@@ -1,4 +1,5 @@
 import asyncio, pathlib, pandas, sys, re
+from datetime import datetime
 from typing import Dict, Set, Tuple
 
 from pandas import DataFrame
@@ -87,6 +88,9 @@ async def run():
 
     await asyncio.gather(*tasks, return_exceptions=True)
 
+    save_position(engine)
+    engine.debug("Positions saved")
+
     engine.close()
     sys.exit()
 
@@ -146,12 +150,19 @@ def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
 
 def save_position(engine: MAEngine) -> None:
     positions: DataFrame = engine.get_all_positions(True)
+    position_dir_path = pathlib.Path(FILE_SETTING["POSITION_DIR_PATH"])
 
     positions["direction"] = positions["direction"].apply(lambda x : "Buy" if x == Direction.LONG else "Sell")
     positions.sort_values(["direction", "symbol"], ascending = [True, True], inplace = True)
     positions = positions[positions["volume"] != 0]
 
-    for gateway_name in 
+    for gateway_name in engine.get_all_gateway_names():
+        positon_file_path = position_dir_path.joinpath(f"{datetime.now().strftime('%Y%m%d')}_{gateway_name}_positions.csv")
+
+        position : DataFrame = positions[position["gatewway_name"] == gateway_name]
+        position = position[["symbol","direction","volume"]]
+        position.to_csv(positon_file_path, index = False)
+
 
 if __name__ == "__main__":
     asyncio.run(run())
