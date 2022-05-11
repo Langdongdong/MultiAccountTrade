@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Dict, Set, Tuple
 
 from pandas import DataFrame
+from MultiAccountTrade.config import ACCOUNT_SETTING, AM_SYMBOL, FILE_SETTING, TWAP_SETTING
 from MultiAccountTrade.utility import is_trade_period
 from object import OrderRequest
 from engine import MAEngine
@@ -13,45 +14,6 @@ from vnpy_rohon import RohonGateway
 
 from twap import TWAP
 from utility import is_night_period
-
-AM_SYMBOL = []
-
-TWAP_SETTING = {
-    "TIME": 60,
-    "INTERVAL": 30
-}
-
-FILE_SETTING = {
-    "ORDER_DIR_PATH": "",
-    "BACKUP_DIR_PATH": "",
-    "POSITION_DIR_PATH": "",
-    "LOG_DIR_PATH": ""
-}
-
-ACCOUNT_SETTING = {
-    "account_name_01": 
-    {
-        "用户名": "083231",
-        "密码": "wodenvshen199!",
-        "经纪商代码": "9999",
-        "交易服务器": "180.168.146.187:10201",
-        "行情服务器": "180.168.146.187:10211",
-        "产品名称": "0000000000000000",
-        "授权编码": "0000000000000000",
-        "Gateway": "CtpGateway"
-    },
-    "account_name_02": 
-    {
-        "用户名": "201414",
-        "密码": "wodenvshen199!",
-        "经纪商代码": "9999",
-        "交易服务器": "180.168.146.187:10201",
-        "行情服务器": "180.168.146.187:10211",
-        "产品名称": "0000000000000000",
-        "授权编码": "0000000000000000",
-        "Gateway": "CtpGateway"
-    }
-}
 
 async def run():
     print(">>>>> START SCRIPT >>>>>")
@@ -83,7 +45,7 @@ async def run():
     
     tasks = []
     for i in range(len(engine.gateways) * 5):
-        tasks.append(asyncio.create_task(run_twap(engine, queue)))
+        tasks.append(asyncio.create_task(run_twap(engine, queue, TWAP_SETTING)))
 
     await queue.join()
     engine.debug("Complete all TWAP")

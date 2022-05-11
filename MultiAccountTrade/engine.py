@@ -1,13 +1,11 @@
+import logging, pathlib, pandas
 
 from abc import ABC
 from datetime import datetime
-from fileinput import filename
-from logging import FileHandler, Logger
-import logging
-import pathlib
-from numpy import longlong
+from logging import Logger
 from pandas import DataFrame
-import pandas
+
+from MultiAccountTrade.config import FILE_SETTING
 from utility import get_df
 
 from copy import copy
