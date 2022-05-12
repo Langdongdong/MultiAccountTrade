@@ -53,7 +53,7 @@ async def run():
     await asyncio.gather(*tasks, return_exceptions=True)
 
     save_position(engine)
-    engine.debug("Positions saved")
+    engine.debug("Positions files saved")
 
     engine.close()
     sys.exit()

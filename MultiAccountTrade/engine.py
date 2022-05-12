@@ -37,9 +37,7 @@ from vnpy.trader.object import (
 )
 
 """
-#############################################
-PositionData struct has changed.
-#############################################
+####################### Change PositionData Struct ######################
 """
 class MAEngine():
     """
