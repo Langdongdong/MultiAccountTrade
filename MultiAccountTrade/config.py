@@ -3,6 +3,7 @@
 # 180.168.146.187:10130
 # 180.168.146.187:10131
 
+# Set the accounts params.
 ACCOUNT_SETTING = {
     "account_name_01": 
     {
@@ -28,6 +29,10 @@ ACCOUNT_SETTING = {
     }
 }
 
+# Symbols which only can be traded in day time.
+AM_SYMBOL = ["UR","JD","AP","SM","SF","LH"]
+
+# Set the file path params.
 FILE_SETTING = {
     "ORDER_DIR_PATH": "Z:/position/TRADE/",
     "POSITION_DIR_PATH": "Z:/HOLD/",
@@ -35,10 +40,8 @@ FILE_SETTING = {
     "LOG_DIR_PATH": "E:/Trade/MAEngine/Log/"
 }
 
-
+# Set the TWAP algo params.
 TWAP_SETTING = {
     "TIME": 60,
     "INTERVAL": 30
 }
-
-AM_SYMBOL = ["UR","JD","AP","SM","SF","LH"]

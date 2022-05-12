@@ -86,11 +86,8 @@ def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
         sys.exit(0)
 
     for gateway_name in engine.get_all_gateway_names():
-        order_file_name = f"{file_date}_{gateway_name}.csv"
-        engine.add_data_file_path(gateway_name, order_file_name)
-
-        backup_file_name = f"{file_date}_{gateway_name}_backup.csv"
-        engine.add_backup_file_path(gateway_name, backup_file_name)
+        engine.add_data_file_path(gateway_name, f"{file_date}_{gateway_name}.csv")
+        engine.add_backup_file_path(gateway_name, f"{file_date}_{gateway_name}_backup.csv")
 
         requests: pandas.DataFrame = engine.load_backup_data(gateway_name)
         if requests is None:
