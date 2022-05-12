@@ -163,7 +163,7 @@ class MAEngine():
 
                     req_td = copy(req)
                     req_td.volume = volume - req.volume
-                    req_td.offset = Offset.CLOSEYESTERDAY
+                    req_td.offset = Offset.CLOSETODAY
                     reqs.append(req_td)
 
         reqs.append(req)
@@ -353,7 +353,7 @@ class DataEngine(BaseEngine):
         self.ma_engine.load_data = self.load_data
 
     def add_data_dir_path(self) -> None:
-        self.data_dir_path = pathlib.Path(FILE_SETTING["ORDER_DIR_PATH"])
+        self.data_dir_path = pathlib.Path(FILE_SETTING.get("ORDER_DIR_PATH"))
         if not self.data_dir_path.exists():
             self.data_dir_path.mkdir()
 
@@ -392,7 +392,7 @@ class BackupEngine(BaseEngine):
         self.ma_engine.backup = self.backup
 
     def add_backup_dir_path(self) -> None:
-        self.backup_dir_path = pathlib.Path(FILE_SETTING["BACKUP_DIR_PATH"])
+        self.backup_dir_path = pathlib.Path(FILE_SETTING.get("BACKUP_DIR_PATH"))
         if not self.backup_dir_path.exists():
             self.backup_dir_path.mkdir()
 
@@ -436,7 +436,7 @@ class LogEngine(BaseEngine):
         self.logger: logging.Logger = logging.getLogger("MAEngine")
         self.formatter = logging.Formatter("%(asctime)s  %(levelname)s: %(message)s")
 
-        self.log_dir_path = pathlib.Path(FILE_SETTING["LOG_DIR_PATH"])
+        self.log_dir_path = pathlib.Path(FILE_SETTING.get("LOG_DIR_PATH"))
         if not self.log_dir_path.exists():
             self.log_dir_path.mkdir()
 

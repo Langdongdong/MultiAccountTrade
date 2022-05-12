@@ -110,7 +110,7 @@ def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
 
 def save_position(engine: MAEngine) -> None:
     positions: pandas.DataFrame = engine.get_all_positions(True)
-    position_dir_path = pathlib.Path(FILE_SETTING["POSITION_DIR_PATH"])
+    position_dir_path = pathlib.Path(FILE_SETTING.get("POSITION_DIR_PATH"))
 
     positions["direction"] = positions["direction"].apply(lambda x : "Buy" if x == Direction.LONG else "Sell")
     positions.sort_values(["direction", "symbol"], ascending = [True, True], inplace = True)
