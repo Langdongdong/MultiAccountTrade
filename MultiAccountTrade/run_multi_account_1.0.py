@@ -1,19 +1,19 @@
 import asyncio, pathlib, pandas, sys, re
+
 from datetime import datetime
 from typing import Dict, Set, Tuple
 
-from pandas import DataFrame
 from MultiAccountTrade.config import ACCOUNT_SETTING, AM_SYMBOL, FILE_SETTING, TWAP_SETTING
 from MultiAccountTrade.utility import is_trade_period
 from object import OrderRequest
 from engine import MAEngine
+from twap import TWAP
+from utility import is_night_period
 
 from vnpy.trader.constant import Direction
 from vnpy_ctp import CtpGateway
 from vnpy_rohon import RohonGateway
 
-from twap import TWAP
-from utility import is_night_period
 
 async def run():
     print(">>>>> START SCRIPT >>>>>")
@@ -93,7 +93,7 @@ def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
         backup_file_path = backup_dir_path.joinpath(f"{file_date}_{gateway_name}_backup.csv")
         engine.add_backup_file_path(gateway_name, backup_file_path)
 
-        requests: DataFrame = engine.load_backup_data(gateway_name)
+        requests: pandas.DataFrame = engine.load_backup_data(gateway_name)
         if requests is None:
             requests = pandas.read_csv(order_file_path)
             engine.add_backup_data(gateway_name, requests)
@@ -113,7 +113,7 @@ def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
     return subscribes, queue
 
 def save_position(engine: MAEngine) -> None:
-    positions: DataFrame = engine.get_all_positions(True)
+    positions: pandas.DataFrame = engine.get_all_positions(True)
     position_dir_path = pathlib.Path(FILE_SETTING["POSITION_DIR_PATH"])
 
     positions["direction"] = positions["direction"].apply(lambda x : "Buy" if x == Direction.LONG else "Sell")
@@ -123,7 +123,7 @@ def save_position(engine: MAEngine) -> None:
     for gateway_name in engine.get_all_gateway_names():
         positon_file_path = position_dir_path.joinpath(f"{datetime.now().strftime('%Y%m%d')}_{gateway_name}_positions.csv")
 
-        position : DataFrame = positions[position["gatewway_name"] == gateway_name]
+        position : pandas.DataFrame = positions[position["gatewway_name"] == gateway_name]
         position = position[["symbol","direction","volume"]]
         position.to_csv(positon_file_path, index = False)
 

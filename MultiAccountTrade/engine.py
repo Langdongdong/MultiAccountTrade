@@ -1,15 +1,13 @@
 import logging, pathlib, pandas
 
 from abc import ABC
+from copy import copy
 from datetime import datetime
-from logging import Logger
-from pandas import DataFrame
+from typing import Any, Dict, List, Optional, Sequence, Type
 
 from MultiAccountTrade.config import FILE_SETTING
 from utility import get_df
 
-from copy import copy
-from typing import Any, Dict, List, Optional, Sequence, Type
 from vnpy.event import Event, EventEngine
 from vnpy.trader.gateway import BaseGateway
 from vnpy.trader.constant import (
@@ -27,7 +25,6 @@ from vnpy.trader.event import (
     EVENT_CONTRACT,
 )
 from vnpy.trader.object import (
-    BaseData,
     TickData,
     TradeData,
     OrderData,
@@ -346,7 +343,7 @@ class BaseEngine(ABC):
 class BackupEngine(BaseEngine):
     def __init__(self, ma_engine: MAEngine) -> None:
         super().__init__(ma_engine, "backup")
-        self.backup_data: Dict[str, DataFrame]  = {}
+        self.backup_data: Dict[str, pandas.DataFrame]  = {}
         self.backup_file_paths: Dict[str, str] = {}
 
     def add_function(self) -> None:
@@ -363,13 +360,13 @@ class BackupEngine(BaseEngine):
     def get_backup_file_path(self, gateway_name: str) -> str:
         return self.backup_file_paths.get(gateway_name)
 
-    def add_backup_data(self, gateway_name: str, data: DataFrame) -> None:
+    def add_backup_data(self, gateway_name: str, data: pandas.DataFrame) -> None:
         self.backup_data[gateway_name] = data
 
     def get_backup_data(self, gateway_name: str) -> Optional[Any]:
         return self.backup_data.get(gateway_name)
 
-    def load_backup_data(self, gateway_name:str) -> Optional[DataFrame]:
+    def load_backup_data(self, gateway_name:str) -> Optional[pandas.DataFrame]:
         file_path = self.get_backup_file_path(gateway_name)
         if pathlib.Path(file_path).exists():
             data = pandas.read_csv(file_path)
@@ -378,7 +375,7 @@ class BackupEngine(BaseEngine):
         return None
 
     def backup(self, gateway_name: str) -> None:
-        data: DataFrame = self.get_backup_data(gateway_name)
+        data: pandas.DataFrame = self.get_backup_data(gateway_name)
         backup_file_path: str = self.get_backup_file_path(gateway_name)
         data.to_csv(backup_file_path)
 
@@ -391,7 +388,7 @@ class LogEngine(BaseEngine):
     def __init__(self, ma_engine: MAEngine) -> None:
         super().__init__(ma_engine, "log")
 
-        self.logger: Logger = logging.getLogger("MAEngine")
+        self.logger: logging.Logger = logging.getLogger("MAEngine")
         self.formatter = logging.Formatter("%(asctime)s  %(levelname)s: %(message)s")
 
         self.add_console_handler()
