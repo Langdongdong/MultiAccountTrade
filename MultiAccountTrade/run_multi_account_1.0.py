@@ -60,6 +60,7 @@ async def run():
     engine.close()
     sys.exit()
 
+
 async def run_twap(engine: MAEngine, queue: asyncio.Queue, twap_setting: Dict[str, int]):
     while not queue.empty():
         data = await queue.get()
@@ -67,6 +68,7 @@ async def run_twap(engine: MAEngine, queue: asyncio.Queue, twap_setting: Dict[st
         await TWAP(engine, data[0], data[1], twap_setting).run()
 
         queue.task_done()
+
 
 def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
     """
@@ -108,21 +110,22 @@ def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
 
     return subscribes, queue
 
+
 def save_position(engine: MAEngine) -> None:
     positions: pandas.DataFrame = engine.get_all_positions(True)
     position_dir_path = pathlib.Path(FILE_SETTING.get("POSITION_DIR_PATH"))
 
+    positions = positions[positions["volume"] != 0]
     positions["direction"] = positions["direction"].apply(lambda x : "Buy" if x == Direction.LONG else "Sell")
     positions.sort_values(["direction", "symbol"], ascending = [True, True], inplace = True)
-    positions = positions[positions["volume"] != 0]
 
     for gateway_name in engine.get_all_gateway_names():
-        positon_file_path = position_dir_path.joinpath(f"{datetime.now().strftime('%Y%m%d')}_{gateway_name}_positions.csv")
-
         position : pandas.DataFrame = positions[position["gatewway_name"] == gateway_name]
-        position = position[["symbol","direction","volume"]]
-        position.to_csv(positon_file_path, index = False)
+        position = position[["symbol", "direction", "volume"]]
 
+        positon_file_path = position_dir_path.joinpath(f"{datetime.now().strftime('%Y%m%d')}_{gateway_name}_positions.csv")
+        position.to_csv(positon_file_path, index = False)
+        
 
 if __name__ == "__main__":
     asyncio.run(run())
