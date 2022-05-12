@@ -19,8 +19,10 @@ async def run():
     print(">>>>> START SCRIPT >>>>>")
     while True:
         if is_trade_period():
-            print(">>>>> START TRADING >>>>>")
-            break
+            current_time = datetime.now().time()
+            if datetime.time(9,5) <= current_time or datetime.time(21,5) <= current_time:
+                print(">>>>> START TRADING >>>>>")
+                break
         await asyncio.sleep(5)
 
     engine = MAEngine([CtpGateway, RohonGateway], ACCOUNT_SETTING)
@@ -31,7 +33,7 @@ async def run():
 
     while True: 
         if engine.is_gateway_inited(engine.get_subscribe_gateway().gateway_name):
-            engine.susbcribe(subscribes)
+            engine.susbcribe(list(subscribes))
             break
         asyncio.sleep(3)
     engine.debug("Symbols subscribed")
@@ -74,13 +76,8 @@ def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
     subscribes: Set[str] = set()
     queue: asyncio.Queue = asyncio.Queue()
 
-    order_dir_path = pathlib.Path(FILE_SETTING["ORDER_DIR_PATH"])
-    backup_dir_path = pathlib.Path(FILE_SETTING["BACKUP_DIR_PATH"])
-    if not backup_dir_path.exists():
-        backup_dir_path.mkdir()
-
     try:
-        iter = order_dir_path.iterdir()
+        iter = pathlib.Path(engine.get_data_dir_path()).iterdir()
         last = next(iter)
         for last in iter: pass
         file_date = re.match("[0-9]*",last.name).group()
@@ -89,13 +86,15 @@ def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
         sys.exit(0)
 
     for gateway_name in engine.get_all_gateway_names():
-        order_file_path = order_dir_path.joinpath(f"{file_date}_{gateway_name}.csv")
-        backup_file_path = backup_dir_path.joinpath(f"{file_date}_{gateway_name}_backup.csv")
-        engine.add_backup_file_path(gateway_name, backup_file_path)
+        order_file_name = f"{file_date}_{gateway_name}.csv"
+        engine.add_data_file_path(gateway_name, order_file_name)
+
+        backup_file_name = f"{file_date}_{gateway_name}_backup.csv"
+        engine.add_backup_file_path(gateway_name, backup_file_name)
 
         requests: pandas.DataFrame = engine.load_backup_data(gateway_name)
         if requests is None:
-            requests = pandas.read_csv(order_file_path)
+            requests = engine.load_data(gateway_name)
             engine.add_backup_data(gateway_name, requests)
             engine.backup(gateway_name)
 

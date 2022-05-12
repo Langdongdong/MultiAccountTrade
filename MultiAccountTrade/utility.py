@@ -12,8 +12,7 @@ def is_trade_period() -> bool:
         or NIGHT_START <= cur_time
         or NIGHT_END >= cur_time
     ):
-        if datetime.time(9,5) <= cur_time or datetime.time(21,5) <= cur_time:
-            return True
+        return True
     return False
 
 

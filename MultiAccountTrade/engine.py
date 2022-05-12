@@ -57,6 +57,7 @@ class MAEngine():
         self.event_engine.start()
 
         self.engines: Dict[str, BaseEngine] = {}
+        self._add_engine(self, DataEngine)
         self._add_engine(self, BackupEngine)
         self._add_engine(self, LogEngine)
 
@@ -336,15 +337,53 @@ class BaseEngine(ABC):
 
     def close(self) -> None:
         pass
+
+
+class DataEngine(BaseEngine):
+    def __init__(self, ma_engine: MAEngine) -> None:
+        super().__init__(ma_engine, "data")
+        self.data_file_paths: Dict[str, str] = {}
+
+        self.add_data_dir_path()
+
+    def add_function(self) -> None:
+        self.ma_engine.get_data_dir_path = self.get_data_dir_path
+        self.ma_engine.add_data_file_path = self.add_data_file_path
+        self.ma_engine.get_data_file_path = self.get_data_file_path
+        self.ma_engine.load_data = self.load_data
+
+    def add_data_dir_path(self) -> None:
+        self.data_dir_path = pathlib.Path(FILE_SETTING["ORDER_DIR_PATH"])
+        if not self.data_dir_path.exists():
+            self.data_dir_path.mkdir()
+
+    def get_data_dir_path(self) -> str:
+        return self.data_dir_path
+
+    def add_data_file_path(self, gateway_name: str, file_name: str) -> None:
+        self.data_file_paths[gateway_name] = self.data_dir_path.joinpath(file_name)
+
+    def get_data_file_path(self, gateway_name: str) -> str:
+        return self.data_file_paths.get(gateway_name)
+
+    def load_data(self, gateway_name: str) -> Optional[pandas.DataFrame]:
+        file_path = self.get_data_file_path(gateway_name)
+        if pathlib.Path(file_path).exists():
+            data = pandas.read_csv(file_path)
+            return data
+        return None
     
 
 class BackupEngine(BaseEngine):
     def __init__(self, ma_engine: MAEngine) -> None:
         super().__init__(ma_engine, "backup")
-        self.backup_data: Dict[str, pandas.DataFrame]  = {}
+        self.backup_datas: Dict[str, pandas.DataFrame]  = {}
         self.backup_file_paths: Dict[str, str] = {}
 
+        self.add_backup_dir_path()
+
     def add_function(self) -> None:
+        self.ma_engine.get_backup_dir_path = self.get_backup_dir_path
         self.ma_engine.add_backup_file_path = self.add_backup_file_path
         self.ma_engine.get_backup_file_path = self.get_backup_file_path
         self.ma_engine.add_backup_data = self.add_backup_data
@@ -352,17 +391,25 @@ class BackupEngine(BaseEngine):
         self.ma_engine.load_backup_data = self.load_backup_data
         self.ma_engine.backup = self.backup
 
-    def add_backup_file_path(self, gateway_name: str, file_path: str) -> None:
-        self.backup_file_paths[gateway_name] = file_path
+    def add_backup_dir_path(self) -> None:
+        self.backup_dir_path = pathlib.Path(FILE_SETTING["BACKUP_DIR_PATH"])
+        if not self.backup_dir_path.exists():
+            self.backup_dir_path.mkdir()
+
+    def get_backup_dir_path(self) -> str:
+        return self.backup_dir_path
+
+    def add_backup_file_path(self, gateway_name: str, file_name: str) -> None:
+        self.backup_file_paths[gateway_name] = self.backup_dir_path.joinpath(file_name)
     
     def get_backup_file_path(self, gateway_name: str) -> str:
         return self.backup_file_paths.get(gateway_name)
 
     def add_backup_data(self, gateway_name: str, data: pandas.DataFrame) -> None:
-        self.backup_data[gateway_name] = data
+        self.backup_datas[gateway_name] = data
 
     def get_backup_data(self, gateway_name: str) -> Optional[Any]:
-        return self.backup_data.get(gateway_name)
+        return self.backup_datas.get(gateway_name)
 
     def load_backup_data(self, gateway_name:str) -> Optional[pandas.DataFrame]:
         file_path = self.get_backup_file_path(gateway_name)
@@ -378,7 +425,7 @@ class BackupEngine(BaseEngine):
         data.to_csv(backup_file_path)
 
     def close(self) -> None:
-        for gateway_name, data in self.backup_data:
+        for gateway_name, data in self.backup_datas:
             data.to_csv(self.get_backup_file_path(gateway_name), index = False)
 
 
@@ -388,6 +435,10 @@ class LogEngine(BaseEngine):
 
         self.logger: logging.Logger = logging.getLogger("MAEngine")
         self.formatter = logging.Formatter("%(asctime)s  %(levelname)s: %(message)s")
+
+        self.log_dir_path = pathlib.Path(FILE_SETTING["LOG_DIR_PATH"])
+        if not self.log_dir_path.exists():
+            self.log_dir_path.mkdir()
 
         self.add_console_handler()
         self.add_file_handler()
@@ -409,7 +460,7 @@ class LogEngine(BaseEngine):
     
     def add_file_handler(self) -> None:
         file_name = f"{datetime.now().strftime('%Y%m%d')}.log"
-        file_path = pathlib.Path(FILE_SETTING["LOG_DIR_PATH"]).joinpath(file_name)
+        file_path = self.log_dir_path.joinpath(file_name)
         file_handler = logging.FileHandler(file_path, mode="a", encoding="utf-8")
         file_handler.setLevel(logging.INFO)
         file_handler.setFormatter(self.formatter)

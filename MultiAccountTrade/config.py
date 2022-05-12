@@ -29,10 +29,10 @@ ACCOUNT_SETTING = {
 }
 
 FILE_SETTING = {
-    "ORDER_DIR_PATH": "",
-    "BACKUP_DIR_PATH": "",
-    "POSITION_DIR_PATH": "",
-    "LOG_DIR_PATH": ""
+    "ORDER_DIR_PATH": "Z:/position/TRADE/",
+    "POSITION_DIR_PATH": "Z:/HOLD/",
+    "BACKUP_DIR_PATH": "E:/Trade/MAEngine/Backup/",
+    "LOG_DIR_PATH": "E:/Trade/MAEngine/Log/"
 }
 
 
