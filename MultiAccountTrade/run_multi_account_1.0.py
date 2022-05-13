@@ -41,6 +41,8 @@ async def run():
     engine.susbcribe(list(subscribes))
     engine.log("Symbols subscribed")
 
+    await asyncio.sleep(1)
+
     tasks = []
     for i in range(len(engine.gateways) * 5):
         tasks.append(asyncio.create_task(run_twap(engine, queue, TWAP_SETTING)))
@@ -114,7 +116,7 @@ def save_position(engine: MAEngine) -> None:
     positions.sort_values(["direction", "symbol"], ascending = [True, True], inplace = True)
 
     for gateway_name in engine.get_all_gateway_names():
-        position : pandas.DataFrame = positions[position["gatewway_name"] == gateway_name]
+        position: pandas.DataFrame = positions[positions["gateway_name"] == gateway_name]
         position = position[["symbol", "direction", "volume"]]
 
         positon_file_path = position_dir_path.joinpath(f"{datetime.now().strftime('%Y%m%d')}_{gateway_name}_positions.csv")

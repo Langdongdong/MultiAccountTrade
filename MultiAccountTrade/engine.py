@@ -119,7 +119,6 @@ class MAEngine():
     def _send_order(self, req: OrderRequest, gateway_name: str) -> str:
         gateway = self.get_gateway(gateway_name)
         if gateway:
-            self.log(req, gateway_name)
             return gateway.send_order(req)
         return ""
 
@@ -150,7 +149,11 @@ class MAEngine():
         )
 
         if offset == Offset.CLOSE:
-            position = self.get_position(f"{gateway_name}.{contract.vt_symbol}.{direction.value}")
+            if direction == Direction.LONG:
+                position = self.get_position(f"{gateway_name}.{contract.vt_symbol}.{Direction.SHORT.value}")
+            else:
+                position = self.get_position(f"{gateway_name}.{contract.vt_symbol}.{Direction.LONG.value}")
+                
             if not position or position.volume - position.frozen < volume:
                 vt_orderids.append("")
                 return vt_orderids

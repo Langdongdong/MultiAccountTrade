@@ -51,21 +51,20 @@ class TWAP():
         elif self.request.order_mode == OrderMode.COVER:
             self.vt_orderids = self.engine.cover(self.request.vt_symbol, volume, self.gateway_name)
 
-        self.engine.log(f"Send order {self.request.vt_symbol} {self.request.order_mode.value} {volume} orderids {self.vt_orderids}", self.gateway_name)
+        self.engine.log(f"Send order {self.request.vt_symbol} {self.request.order_mode.value} {volume} {self.vt_orderids}", self.gateway_name)
 
     def cancel_active_orders(self) -> None:
         for vt_orderid in self.vt_orderids:
             self.engine.cancel_active_order(vt_orderid)
-
-        self.engine.log(f"Cancel active order {self.request.vt_symbol}", self.gateway_name)
+            self.engine.log(f"Cancel active order {self.request.vt_symbol} {vt_orderid}", self.gateway_name)
 
     def update_traded_volume(self) -> None:
         for vt_orderid in self.vt_orderids:
             order = self.engine.get_order(vt_orderid)
             if order:
                 self.traded_volume += order.traded
-
-        self.engine.log(f"Update traded order {self.request.vt_symbol} traded {self.traded_volume}", self.gateway_name)
+                self.engine.log(f"{self.request.vt_symbol} traded {order.traded} {vt_orderid}", self.gateway_name)
+        
 
     def get_twap_volume(self) -> float:
         return max(float(math.floor(self.request.volume / (self.time / self.interval))), 1.0)
