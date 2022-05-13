@@ -31,20 +31,16 @@ async def run():
     subscribes, queue = load_data(engine)
     engine.log("Data loaded")
 
-    while True: 
-        if engine.is_gateway_inited(engine.get_subscribe_gateway_name()):
-            engine.susbcribe(list(subscribes))
-            break
-        await asyncio.sleep(3)
-    engine.log("Symbols subscribed")
-
     while True:
         not_inited_gateway_names = [gateway_name for gateway_name in engine.get_all_gateway_names() if not engine.is_gateway_inited(gateway_name)]
         if len(not_inited_gateway_names) == 0:
             break
-        await asyncio.sleep(10)
+        await asyncio.sleep(3)
     engine.log("All gateways inited")
-    
+
+    engine.susbcribe(list(subscribes))
+    engine.log("Symbols subscribed")
+
     tasks = []
     for i in range(len(engine.gateways) * 5):
         tasks.append(asyncio.create_task(run_twap(engine, queue, TWAP_SETTING)))
