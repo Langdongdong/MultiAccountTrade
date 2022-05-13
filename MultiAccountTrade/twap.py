@@ -60,10 +60,10 @@ class TWAP():
         self.engine.log(f"Cancel active order {self.request.vt_symbol}", self.gateway_name)
 
     def update_traded_volume(self) -> None:
-        trades: List[TradeData] = self.engine.get_all_trades()
-        for trade in trades:
-            if trade.orderid in self.vt_orderids:
-                self.traded_volume += trade.volume
+        for vt_orderid in self.vt_orderids:
+            order = self.engine.get_order(vt_orderid)
+            if order:
+                self.traded_volume += order.traded
 
         self.engine.log(f"Update traded order {self.request.vt_symbol} traded {self.traded_volume}", self.gateway_name)
 
