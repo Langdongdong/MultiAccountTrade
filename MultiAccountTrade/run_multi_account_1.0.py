@@ -3,8 +3,8 @@ import asyncio, pathlib, pandas, sys, re
 from datetime import datetime
 from typing import Dict, Set, Tuple
 
-from MultiAccountTrade.config import ACCOUNT_SETTING, AM_SYMBOL, FILE_SETTING, TWAP_SETTING
-from MultiAccountTrade.utility import is_trade_period
+from config import ACCOUNT_SETTING, AM_SYMBOL, FILE_SETTING, TWAP_SETTING
+from utility import is_trade_period
 from object import OrderRequest
 from engine import MAEngine
 from twap import TWAP
@@ -17,13 +17,13 @@ from vnpy_rohon import RohonGateway
 
 async def run():
     print(">>>>> START SCRIPT >>>>>")
-    while True:
-        if is_trade_period():
-            current_time = datetime.now().time()
-            if datetime.time(9,5) <= current_time or datetime.time(21,5) <= current_time:
-                print(">>>>> START TRADING >>>>>")
-                break
-        await asyncio.sleep(5)
+    # while True:
+    #     if is_trade_period():
+    #         current_time = datetime.now().time()
+    #         if datetime.time(9,5) <= current_time or datetime.time(21,5) <= current_time:
+    #             print(">>>>> START TRADING >>>>>")
+    #             break
+    #     await asyncio.sleep(5)
 
     engine = MAEngine([CtpGateway, RohonGateway], ACCOUNT_SETTING)
     engine.debug("Engine inited")
@@ -31,31 +31,31 @@ async def run():
     subscribes, queue = load_data(engine)
     engine.debug("Data loaded")
 
-    while True: 
-        if engine.is_gateway_inited(engine.get_subscribe_gateway().gateway_name):
-            engine.susbcribe(list(subscribes))
-            break
-        asyncio.sleep(3)
-    engine.debug("Symbols subscribed")
+    # while True: 
+    #     if engine.is_gateway_inited(engine.get_subscribe_gateway().gateway_name):
+    #         engine.susbcribe(list(subscribes))
+    #         break
+    #     asyncio.sleep(3)
+    # engine.debug("Symbols subscribed")
 
-    while True:
-        not_inited_gateway_names = [n for n in engine.get_all_gateway_names() if not engine.is_gateway_inited(n)]
-        if len(not_inited_gateway_names) == 0:
-            break
-        await asyncio.sleep(3)
-    engine.debug("All gateways inited")
+    # while True:
+    #     not_inited_gateway_names = [n for n in engine.get_all_gateway_names() if not engine.is_gateway_inited(n)]
+    #     if len(not_inited_gateway_names) == 0:
+    #         break
+    #     await asyncio.sleep(3)
+    # engine.debug("All gateways inited")
     
-    tasks = []
-    for i in range(len(engine.gateways) * 5):
-        tasks.append(asyncio.create_task(run_twap(engine, queue, TWAP_SETTING)))
+    # tasks = []
+    # for i in range(len(engine.gateways) * 5):
+    #     tasks.append(asyncio.create_task(run_twap(engine, queue, TWAP_SETTING)))
 
-    await queue.join()
-    engine.debug("Complete all TWAP")
+    # await queue.join()
+    # engine.debug("Complete all TWAP")
 
-    await asyncio.gather(*tasks, return_exceptions=True)
+    # await asyncio.gather(*tasks, return_exceptions=True)
 
-    save_position(engine)
-    engine.debug("Positions files saved")
+    # save_position(engine)
+    # engine.debug("Positions files saved")
 
     engine.close()
     sys.exit()
@@ -94,8 +94,8 @@ def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
         requests: pandas.DataFrame = engine.load_backup_data(gateway_name)
         if requests is None:
             requests = engine.load_data(gateway_name)
-            engine.add_backup_data(gateway_name, requests)
-            engine.backup(gateway_name)
+            # engine.add_backup_data(gateway_name, requests)
+            # engine.backup(gateway_name)
 
         if is_night_period():
             requests = requests[requests["ContractID"].apply(lambda x:(re.match("[^0-9]*", x, re.I).group().upper() not in AM_SYMBOL))]
@@ -108,6 +108,7 @@ def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
 
         subscribes.update([OrderRequest.convert_to_vt_symbol(symbol) for symbol in requests["ContractID"].tolist()])
 
+        print(requests)
     return subscribes, queue
 
 

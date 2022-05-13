@@ -1,4 +1,3 @@
-from typing import Tuple
 from constant import OrderMode
 from vnpy.trader.constant import Exchange
 

@@ -5,7 +5,7 @@
 
 # Set the accounts params.
 ACCOUNT_SETTING = {
-    "account_name_01": 
+    "DDTEST1": 
     {
         "用户名": "083231",
         "密码": "wodenvshen199!",
@@ -16,7 +16,7 @@ ACCOUNT_SETTING = {
         "授权编码": "0000000000000000",
         "Gateway": "CtpGateway"
     },
-    "account_name_02": 
+    "DDTEST2": 
     {
         "用户名": "201414",
         "密码": "wodenvshen199!",

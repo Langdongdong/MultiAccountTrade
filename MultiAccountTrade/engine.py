@@ -5,7 +5,7 @@ from copy import copy
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence, Type
 
-from MultiAccountTrade.config import FILE_SETTING
+from config import FILE_SETTING
 from utility import get_df
 
 from vnpy.event import Event, EventEngine
@@ -57,17 +57,17 @@ class MAEngine():
         self.event_engine.start()
 
         self.engines: Dict[str, BaseEngine] = {}
-        self._add_engine(self, DataEngine)
-        self._add_engine(self, BackupEngine)
-        self._add_engine(self, LogEngine)
+        self._add_engine(DataEngine)
+        self._add_engine(BackupEngine)
+        self._add_engine(LogEngine)
 
         self.gateways: Dict[str, BaseGateway] = {}
-        self.gateway_classes = Dict[str, Type[BaseGateway]] = {}
+        self.gateway_classes: Dict[str, Type[BaseGateway]] = {}
+        self.susbcribe_gateway: BaseGateway = None
         self._add_gateway_classes(gateway_classes)
         self._add_gateways(settings)
         self._connect_gateways(settings)
 
-        self.susbcribe_gateway: BaseGateway = None
 
     def _add_gateway(self, gateway_class_name: str, gateway_name: str) -> None:
         gateway_class: Optional[Type[BaseGateway]] = self.get_gateway_class(gateway_class_name)
@@ -80,7 +80,6 @@ class MAEngine():
             gateway_class_name = setting.get("Gateway")
             if gateway_class_name:
                 self._add_gateway(gateway_class_name, gateway_name)
-                
         self._add_subscribe_gateway()
 
     def _add_gateway_class(self, gateway_class: Type[BaseGateway]) -> None:
@@ -345,6 +344,7 @@ class DataEngine(BaseEngine):
         self.data_file_paths: Dict[str, str] = {}
 
         self.add_data_dir_path()
+        self.add_function()
 
     def add_function(self) -> None:
         self.ma_engine.get_data_dir_path = self.get_data_dir_path
@@ -358,6 +358,7 @@ class DataEngine(BaseEngine):
             self.data_dir_path.mkdir()
 
     def get_data_dir_path(self) -> str:
+        print(self.data_dir_path)
         return self.data_dir_path
 
     def add_data_file_path(self, gateway_name: str, file_name: str) -> None:
@@ -381,6 +382,7 @@ class BackupEngine(BaseEngine):
         self.backup_file_paths: Dict[str, str] = {}
 
         self.add_backup_dir_path()
+        self.add_function()
 
     def add_function(self) -> None:
         self.ma_engine.get_backup_dir_path = self.get_backup_dir_path
@@ -442,7 +444,6 @@ class LogEngine(BaseEngine):
 
         self.add_console_handler()
         self.add_file_handler()
-
         self.add_function()
 
     def add_function(self) -> None:
