@@ -7,11 +7,8 @@ class OrderRequest:
         self.Op1 = Op1
         self.Op2 = Op2
         self.volume = Num
-        
-    def __post__init__(self):
         self.vt_symbol = self.convert_to_vt_symbol(self.ContractID)
         self.order_mode = self.convert_to_vt_order_mode(self.Op1, self.Op2)
-
 
     @classmethod
     def convert_to_vt_symbol(self, symbol: str) -> str:

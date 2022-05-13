@@ -1,4 +1,5 @@
 import logging, pathlib, pandas
+from numpy import logaddexp
 
 from abc import ABC
 from copy import copy
@@ -17,6 +18,7 @@ from vnpy.trader.constant import (
     Exchange,
 )
 from vnpy.trader.event import (
+    EVENT_LOG,
     EVENT_TICK,
     EVENT_ORDER,
     EVENT_TRADE,
@@ -25,6 +27,7 @@ from vnpy.trader.event import (
     EVENT_CONTRACT,
 )
 from vnpy.trader.object import (
+    LogData,
     TickData,
     TradeData,
     OrderData,
@@ -63,10 +66,11 @@ class MAEngine():
 
         self.gateways: Dict[str, BaseGateway] = {}
         self.gateway_classes: Dict[str, Type[BaseGateway]] = {}
-        self.susbcribe_gateway: BaseGateway = None
+        self.susbcribe_gateway_name: BaseGateway = None
         self._add_gateway_classes(gateway_classes)
         self._add_gateways(settings)
         self._connect_gateways(settings)
+        
 
 
     def _add_gateway(self, gateway_class_name: str, gateway_name: str) -> None:
@@ -80,7 +84,7 @@ class MAEngine():
             gateway_class_name = setting.get("Gateway")
             if gateway_class_name:
                 self._add_gateway(gateway_class_name, gateway_name)
-        self._add_subscribe_gateway()
+        self._add_subscribe_gateway_name()
 
     def _add_gateway_class(self, gateway_class: Type[BaseGateway]) -> None:
         self.gateway_classes[gateway_class.__name__] = gateway_class
@@ -89,12 +93,12 @@ class MAEngine():
         for gateway_class in gateway_classes:
             self._add_gateway_class(gateway_class)
 
-    def _add_subscribe_gateway(self) -> None:
-        if self.susbcribe_gateway is None:
-            self.susbcribe_gateway = self.get_all_gateways()[0]
+    def _add_subscribe_gateway_name(self) -> None:
+        if self.susbcribe_gateway_name is None:
+            self.susbcribe_gateway_name = self.get_all_gateways()[0].gateway_name
 
     def _add_engine(self, engine_class: Any) -> "BaseEngine":
-        engine: BaseEngine = engine_class(self)
+        engine: BaseEngine = engine_class(self, self.event_engine)
         self.engines[engine.engine_name] = engine
         return engine
 
@@ -115,6 +119,7 @@ class MAEngine():
     def _send_order(self, req: OrderRequest, gateway_name: str) -> str:
         gateway = self.get_gateway(gateway_name)
         if gateway:
+            self.log(req, gateway_name)
             return gateway.send_order(req)
         return ""
 
@@ -124,6 +129,7 @@ class MAEngine():
         
         tick: TickData = self.get_tick(vt_symbol)
         contract: ContractData = self.get_contract(vt_symbol)
+
         if tick is None or contract is None:
             vt_orderids.append("")
             return vt_orderids
@@ -200,7 +206,7 @@ class MAEngine():
 
     def _process_contract_event(self, event: Event) -> None:
         contract: ContractData = event.data
-        if self.get_contract(contract.vt_symbol) is not None:
+        if self.get_contract(contract.vt_symbol) is None:
             self.contracts[contract.vt_symbol] = contract
 
     def _process_account_event(self, event: Event) -> None:
@@ -221,8 +227,8 @@ class MAEngine():
     def get_gateway_class(self, gateway_class_name: str) -> Optional[Type[BaseGateway]]:
         return self.gateway_classes.get(gateway_class_name)
 
-    def get_subscribe_gateway(self) -> Optional[BaseGateway]:
-        return self.susbcribe_gateway
+    def get_subscribe_gateway_name(self) -> Optional[BaseGateway]:
+        return self.susbcribe_gateway_name
 
     def get_engine(self, engine_name: str) -> Optional["BaseEngine"]:
         return self.engines.get(engine_name)
@@ -288,8 +294,8 @@ class MAEngine():
         return False
 
     def susbcribe(self, vt_symbols: List[str]) -> None:
-        gateway: Optional[BaseGateway] = self.get_subscribe_gateway()
-        if gateway:
+        gateway_name: Optional[BaseGateway] = self.get_subscribe_gateway_name()
+        if gateway_name:
             for vt_symbol in vt_symbols:
                 contract: Optional[ContractData] = self.get_contract(vt_symbol)
                 if contract:
@@ -297,7 +303,7 @@ class MAEngine():
                         symbol = contract.symbol,
                         exchange = contract.exchange
                     )
-                    self._subscribe(req, gateway.gateway_name)
+                    self._subscribe(req, gateway_name)
 
     def buy(self, vt_symbol: str, volume: float, gateway_name: str) -> List[str]:
         return self._send_taker_order(vt_symbol, volume, Direction.LONG, Offset.OPEN, gateway_name)
@@ -319,6 +325,11 @@ class MAEngine():
         req: CancelRequest = active_order.create_cancel_request()
         self._cancel_order(req, active_order.gateway_name)
 
+    def log(self, msg: str, gateway_name: str = "") -> None:
+        log: LogData = LogData(gateway_name, msg)
+        event: Event = Event(EVENT_LOG, log)
+        self.event_engine.put(event)
+
     def close(self) -> None:
         self.event_engine.stop()
 
@@ -330,8 +341,9 @@ class MAEngine():
 
 
 class BaseEngine(ABC):
-    def __init__(self, ma_engine:MAEngine, engine_name: str) -> None:
+    def __init__(self, ma_engine: MAEngine, event_engine: EventEngine, engine_name: str) -> None:
         self.ma_engine = ma_engine
+        self.event_engine = event_engine
         self.engine_name = engine_name
 
     def close(self) -> None:
@@ -339,8 +351,8 @@ class BaseEngine(ABC):
 
 
 class DataEngine(BaseEngine):
-    def __init__(self, ma_engine: MAEngine) -> None:
-        super().__init__(ma_engine, "data")
+    def __init__(self, ma_engine: MAEngine, event_engine: EventEngine) -> None:
+        super().__init__(ma_engine, event_engine, "data")
         self.data_file_paths: Dict[str, str] = {}
 
         self.add_data_dir_path()
@@ -358,7 +370,6 @@ class DataEngine(BaseEngine):
             self.data_dir_path.mkdir()
 
     def get_data_dir_path(self) -> str:
-        print(self.data_dir_path)
         return self.data_dir_path
 
     def add_data_file_path(self, gateway_name: str, file_name: str) -> None:
@@ -376,8 +387,8 @@ class DataEngine(BaseEngine):
     
 
 class BackupEngine(BaseEngine):
-    def __init__(self, ma_engine: MAEngine) -> None:
-        super().__init__(ma_engine, "backup")
+    def __init__(self, ma_engine: MAEngine, event_engine: EventEngine) -> None:
+        super().__init__(ma_engine, event_engine, "backup")
         self.backup_datas: Dict[str, pandas.DataFrame]  = {}
         self.backup_file_paths: Dict[str, str] = {}
 
@@ -424,18 +435,20 @@ class BackupEngine(BaseEngine):
     def backup(self, gateway_name: str) -> None:
         data: pandas.DataFrame = self.get_backup_data(gateway_name)
         backup_file_path: str = self.get_backup_file_path(gateway_name)
-        data.to_csv(backup_file_path)
+        data.to_csv(backup_file_path, index=False)
 
     def close(self) -> None:
-        for gateway_name, data in self.backup_datas:
+        for gateway_name, data in self.backup_datas.items():
             data.to_csv(self.get_backup_file_path(gateway_name), index = False)
 
 
 class LogEngine(BaseEngine):
-    def __init__(self, ma_engine: MAEngine) -> None:
-        super().__init__(ma_engine, "log")
+    def __init__(self, ma_engine: MAEngine, event_engine: EventEngine) -> None:
+        super().__init__(ma_engine, event_engine, "log")
 
         self.logger: logging.Logger = logging.getLogger("MAEngine")
+        self.logger.setLevel(logging.INFO)
+
         self.formatter = logging.Formatter("%(asctime)s  %(levelname)s: %(message)s")
 
         self.log_dir_path = pathlib.Path(FILE_SETTING.get("LOG_DIR_PATH"))
@@ -444,19 +457,12 @@ class LogEngine(BaseEngine):
 
         self.add_console_handler()
         self.add_file_handler()
-        self.add_function()
-        self.logger.debug("daff")
 
-    def add_function(self) -> None:
-        self.ma_engine.debug = self.logger.debug
-        self.ma_engine.info = self.logger.info
-        self.ma_engine.warning = self.logger.warning
-        self.ma_engine.error = self.logger.error
-        self.ma_engine.critical = self.logger.critical
+        self.register_event()
 
     def add_console_handler(self) -> None:
         console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.DEBUG)
+        console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(self.formatter)
         self.logger.addHandler(console_handler)
     
@@ -467,5 +473,15 @@ class LogEngine(BaseEngine):
         file_handler.setLevel(logging.INFO)
         file_handler.setFormatter(self.formatter)
         self.logger.addHandler(file_handler)
+
+    def process_log_event(self, event: Event) -> None:
+        log: LogData = event.data
+        if log.gateway_name:
+            self.logger.log(log.level, f"{log.gateway_name} {log.msg}")
+        else:
+            self.logger.log(log.level, log.msg)
+
+    def register_event(self) -> None:
+        self.event_engine.register(EVENT_LOG, self.process_log_event)
 
     

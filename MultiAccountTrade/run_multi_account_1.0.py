@@ -26,36 +26,36 @@ async def run():
     #     await asyncio.sleep(5)
 
     engine = MAEngine([CtpGateway, RohonGateway], ACCOUNT_SETTING)
-    engine.info("Engine inited")
+    engine.log("Engine inited")
 
     subscribes, queue = load_data(engine)
-    engine.info("Data loaded")
+    engine.log("Data loaded")
 
-    # while True: 
-    #     if engine.is_gateway_inited(engine.get_subscribe_gateway().gateway_name):
-    #         engine.susbcribe(list(subscribes))
-    #         break
-    #     asyncio.sleep(3)
-    # engine.debug("Symbols subscribed")
+    while True: 
+        if engine.is_gateway_inited(engine.get_subscribe_gateway_name()):
+            engine.susbcribe(list(subscribes))
+            break
+        await asyncio.sleep(3)
+    engine.log("Symbols subscribed")
 
-    # while True:
-    #     not_inited_gateway_names = [n for n in engine.get_all_gateway_names() if not engine.is_gateway_inited(n)]
-    #     if len(not_inited_gateway_names) == 0:
-    #         break
-    #     await asyncio.sleep(3)
-    # engine.debug("All gateways inited")
+    while True:
+        not_inited_gateway_names = [gateway_name for gateway_name in engine.get_all_gateway_names() if not engine.is_gateway_inited(gateway_name)]
+        if len(not_inited_gateway_names) == 0:
+            break
+        await asyncio.sleep(10)
+    engine.log("All gateways inited")
     
-    # tasks = []
-    # for i in range(len(engine.gateways) * 5):
-    #     tasks.append(asyncio.create_task(run_twap(engine, queue, TWAP_SETTING)))
+    tasks = []
+    for i in range(len(engine.gateways) * 5):
+        tasks.append(asyncio.create_task(run_twap(engine, queue, TWAP_SETTING)))
 
-    # await queue.join()
-    # engine.debug("Complete all TWAP")
+    await queue.join()
+    engine.log("Complete all TWAP")
 
-    # await asyncio.gather(*tasks, return_exceptions=True)
+    await asyncio.gather(*tasks, return_exceptions=True)
 
-    # save_position(engine)
-    # engine.debug("Positions files saved")
+    save_position(engine)
+    engine.log("Positions files saved")
 
     engine.close()
     sys.exit()
@@ -64,11 +64,9 @@ async def run():
 async def run_twap(engine: MAEngine, queue: asyncio.Queue, twap_setting: Dict[str, int]):
     while not queue.empty():
         data = await queue.get()
-
-        await TWAP(engine, data[0], data[1], twap_setting).run()
-
+        twap = TWAP(engine, data[0], data[1], twap_setting)
+        await twap.run()
         queue.task_done()
-
 
 def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
     """
@@ -94,8 +92,8 @@ def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
         requests: pandas.DataFrame = engine.load_backup_data(gateway_name)
         if requests is None:
             requests = engine.load_data(gateway_name)
-            # engine.add_backup_data(gateway_name, requests)
-            # engine.backup(gateway_name)
+            engine.add_backup_data(gateway_name, requests)
+            engine.backup(gateway_name)
 
         if is_night_period():
             requests = requests[requests["ContractID"].apply(lambda x:(re.match("[^0-9]*", x, re.I).group().upper() not in AM_SYMBOL))]
@@ -108,7 +106,6 @@ def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
 
         subscribes.update([OrderRequest.convert_to_vt_symbol(symbol) for symbol in requests["ContractID"].tolist()])
 
-        print(requests)
     return subscribes, queue
 
 
