@@ -445,6 +445,7 @@ class LogEngine(BaseEngine):
         self.add_console_handler()
         self.add_file_handler()
         self.add_function()
+        self.logger.debug("daff")
 
     def add_function(self) -> None:
         self.ma_engine.debug = self.logger.debug

@@ -26,10 +26,10 @@ async def run():
     #     await asyncio.sleep(5)
 
     engine = MAEngine([CtpGateway, RohonGateway], ACCOUNT_SETTING)
-    engine.debug("Engine inited")
+    engine.info("Engine inited")
 
     subscribes, queue = load_data(engine)
-    engine.debug("Data loaded")
+    engine.info("Data loaded")
 
     # while True: 
     #     if engine.is_gateway_inited(engine.get_subscribe_gateway().gateway_name):
