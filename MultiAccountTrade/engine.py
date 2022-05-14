@@ -327,6 +327,7 @@ class MAEngine():
         
         req: CancelRequest = active_order.create_cancel_request()
         self._cancel_order(req, active_order.gateway_name)
+        self.log()
 
     def log(self, msg: str, gateway_name: str = "") -> None:
         log: LogData = LogData(gateway_name, msg)

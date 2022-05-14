@@ -1,12 +1,15 @@
+from dataclasses import dataclass
 from constant import OrderMode
 from vnpy.trader.constant import Exchange
 
-class OrderRequest:
-    def __init__(self, ContractID: str, Op1: str, Op2: str, Num: float) -> None:
-        self.ContractID = ContractID
-        self.Op1 = Op1
-        self.Op2 = Op2
-        self.volume = Num
+@dataclass
+class OrderAsking:
+    ContractID: str
+    Op1: str
+    Op2: str
+    volume: float
+
+    def __post_init__(self) -> None:
         self.vt_symbol = self.convert_to_vt_symbol(self.ContractID)
         self.order_mode = self.convert_to_vt_order_mode(self.Op1, self.Op2)
 

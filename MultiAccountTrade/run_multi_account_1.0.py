@@ -5,7 +5,7 @@ from typing import Dict, Set, Tuple
 
 from config import ACCOUNT_SETTING, AM_SYMBOL, FILE_SETTING, TWAP_SETTING
 from utility import is_trade_period
-from object import OrderRequest
+from object import OrderAsking
 from engine import MAEngine
 from twap import TWAP
 from utility import is_night_period
@@ -99,10 +99,10 @@ def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
         for row in requests.itertuples():
             if getattr(row, "Num") <= 0:
                 continue
-            request = OrderRequest(getattr(row, "ContractID"), getattr(row, "Op1"), getattr(row, "Op2"), getattr(row, "Num"))
+            request = OrderAsking(getattr(row, "ContractID"), getattr(row, "Op1"), getattr(row, "Op2"), getattr(row, "Num"))
             queue.put_nowait((gateway_name, request))
 
-        subscribes.update([OrderRequest.convert_to_vt_symbol(symbol) for symbol in requests["ContractID"].tolist()])
+        subscribes.update([OrderAsking.convert_to_vt_symbol(symbol) for symbol in requests["ContractID"].tolist()])
 
     return subscribes, queue
 
