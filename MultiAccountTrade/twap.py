@@ -2,19 +2,20 @@ import asyncio, math
 from typing import List, Dict
 
 from pandas import DataFrame
+from MultiAccountTrade.config import TWAP_SETTING
 
 from engine import  MAEngine
 from constant import OrderMode
 from object import OrderAsking
 
 class TWAP():
-    def __init__(self, engine: MAEngine, gateway_name: str, request: OrderAsking, setting: Dict[str, int]) -> None:
+    def __init__(self, engine: MAEngine, gateway_name: str, request: OrderAsking) -> None:
         self.engine: MAEngine = engine
         self.gateway_name: str = gateway_name
         self.request: OrderAsking = request
         
-        self.time: int = setting.get("TIME")
-        self.interval: int = setting.get("INTERVAL")
+        self.time: int = TWAP_SETTING.get("TIME")
+        self.interval: int = TWAP_SETTING.get("INTERVAL")
 
         self.vt_orderids: List[str] = []
         self.traded_volume: float = 0

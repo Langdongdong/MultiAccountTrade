@@ -119,7 +119,9 @@ class MAEngine():
     def _send_order(self, req: OrderRequest, gateway_name: str) -> str:
         gateway = self.get_gateway(gateway_name)
         if gateway:
-            return gateway.send_order(req)
+            vt_orderid = gateway.send_order(req)
+            self.log(f"Send order {vt_orderid} {req.vt_symbol} {req.volume} {req.direction.value} {req.offset.value}", gateway_name)
+            return vt_orderid
         return ""
 
     def _send_taker_order(self, vt_symbol: str, volume: float, direction: Direction, offset: Offset, gateway_name: str) -> List[str]:
@@ -202,6 +204,7 @@ class MAEngine():
     def _process_trade_event(self, event: Event) -> None:
         trade: TradeData = event.data
         self.trades[trade.vt_tradeid] = trade
+        self.log(f"Trade {trade.vt_symbol} {trade.volume} {trade.direction.value} {trade.offset.value}", trade.gateway_name)
 
     def _process_position_event(self, event: Event) -> None:
         position: PositionData = event.data

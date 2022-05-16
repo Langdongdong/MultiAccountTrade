@@ -45,7 +45,7 @@ async def run():
 
     tasks = []
     for i in range(len(engine.gateways) * 5):
-        tasks.append(asyncio.create_task(run_twap(engine, queue, TWAP_SETTING)))
+        tasks.append(asyncio.create_task(run_twap(engine, queue)))
 
     await queue.join()
     engine.log("Complete all TWAP")
@@ -59,10 +59,10 @@ async def run():
     sys.exit()
 
 
-async def run_twap(engine: MAEngine, queue: asyncio.Queue, twap_setting: Dict[str, int]):
+async def run_twap(engine: MAEngine, queue: asyncio.Queue):
     while not queue.empty():
         data = await queue.get()
-        twap = TWAP(engine, data[0], data[1], twap_setting)
+        twap = TWAP(engine, data[0], data[1])
         await twap.run()
         queue.task_done()
 
