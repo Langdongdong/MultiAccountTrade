@@ -41,7 +41,7 @@ from vnpy.trader.object import (
 """
 ####################### Change PositionData Struct ######################
 """
-class MAEngine():
+class MainEngine():
     """
     Only use for CTP like api.
     """
@@ -350,8 +350,8 @@ class MAEngine():
 
 
 class BaseEngine(ABC):
-    def __init__(self, ma_engine: MAEngine, event_engine: EventEngine, engine_name: str) -> None:
-        self.ma_engine = ma_engine
+    def __init__(self, main_engine: MainEngine, event_engine: EventEngine, engine_name: str) -> None:
+        self.main_engine = main_engine
         self.event_engine = event_engine
         self.engine_name = engine_name
 
@@ -360,8 +360,8 @@ class BaseEngine(ABC):
 
 
 class DataEngine(BaseEngine):
-    def __init__(self, ma_engine: MAEngine, event_engine: EventEngine) -> None:
-        super().__init__(ma_engine, event_engine, "data")
+    def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
+        super().__init__(main_engine, event_engine, "data")
         
         self.data_file_paths: Dict[str, str] = {}
 
@@ -369,10 +369,10 @@ class DataEngine(BaseEngine):
         self.add_function()
 
     def add_function(self) -> None:
-        self.ma_engine.get_data_dir_path = self.get_data_dir_path
-        self.ma_engine.add_data_file_path = self.add_data_file_path
-        self.ma_engine.get_data_file_path = self.get_data_file_path
-        self.ma_engine.load_data = self.load_data
+        self.main_engine.get_data_dir_path = self.get_data_dir_path
+        self.main_engine.add_data_file_path = self.add_data_file_path
+        self.main_engine.get_data_file_path = self.get_data_file_path
+        self.main_engine.load_data = self.load_data
 
     def add_data_dir_path(self) -> None:
         self.data_dir_path = pathlib.Path(FILE_SETTING.get("ORDER_DIR_PATH"))
@@ -392,14 +392,14 @@ class DataEngine(BaseEngine):
         file_path = self.get_data_file_path(gateway_name)
         if pathlib.Path(file_path).exists():
             data = pandas.read_csv(file_path)
-            self.ma_engine.log("Data loaded.", gateway_name)
+            self.main_engine.log("Data loaded.", gateway_name)
             return data
         return None
     
 
 class BackupEngine(BaseEngine):
-    def __init__(self, ma_engine: MAEngine, event_engine: EventEngine) -> None:
-        super().__init__(ma_engine, event_engine, "backup")
+    def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
+        super().__init__(main_engine, event_engine, "backup")
 
         self.backup_datas: Dict[str, pandas.DataFrame]  = {}
         self.backup_file_paths: Dict[str, str] = {}
@@ -408,13 +408,13 @@ class BackupEngine(BaseEngine):
         self.add_function()
 
     def add_function(self) -> None:
-        self.ma_engine.get_backup_dir_path = self.get_backup_dir_path
-        self.ma_engine.add_backup_file_path = self.add_backup_file_path
-        self.ma_engine.get_backup_file_path = self.get_backup_file_path
-        self.ma_engine.add_backup_data = self.add_backup_data
-        self.ma_engine.get_backup_data = self.get_backup_data
-        self.ma_engine.load_backup_data = self.load_backup_data
-        self.ma_engine.backup = self.backup
+        self.main_engine.get_backup_dir_path = self.get_backup_dir_path
+        self.main_engine.add_backup_file_path = self.add_backup_file_path
+        self.main_engine.get_backup_file_path = self.get_backup_file_path
+        self.main_engine.add_backup_data = self.add_backup_data
+        self.main_engine.get_backup_data = self.get_backup_data
+        self.main_engine.load_backup_data = self.load_backup_data
+        self.main_engine.backup = self.backup
 
     def add_backup_dir_path(self) -> None:
         self.backup_dir_path = pathlib.Path(FILE_SETTING.get("BACKUP_DIR_PATH"))
@@ -455,10 +455,10 @@ class BackupEngine(BaseEngine):
 
 
 class LogEngine(BaseEngine):
-    def __init__(self, ma_engine: MAEngine, event_engine: EventEngine) -> None:
-        super().__init__(ma_engine, event_engine, "log")
+    def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
+        super().__init__(main_engine, event_engine, "log")
 
-        self.logger: logging.Logger = logging.getLogger("MAEngine")
+        self.logger: logging.Logger = logging.getLogger("MainEngine")
         self.formatter = logging.Formatter("%(asctime)s  %(levelname)s: %(message)s")
         self.logger.setLevel(logging.INFO)
         

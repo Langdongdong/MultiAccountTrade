@@ -1,12 +1,12 @@
 import asyncio, pathlib, pandas, sys, re
 
 from datetime import datetime
-from typing import Dict, Set, Tuple
+from typing import Set, Tuple
 
-from config import ACCOUNT_SETTING, AM_SYMBOL, FILE_SETTING, TWAP_SETTING
+from config import ACCOUNT_SETTING, AM_SYMBOL, FILE_SETTING
 from utility import is_trade_period
 from object import OrderAsking
-from engine import MAEngine
+from engine import MainEngine
 from twap import TWAP
 from utility import is_night_period
 
@@ -25,7 +25,7 @@ async def run():
     #             break
     #     await asyncio.sleep(5)
 
-    engine = MAEngine([CtpGateway, RohonGateway], ACCOUNT_SETTING)
+    engine = MainEngine([CtpGateway, RohonGateway], ACCOUNT_SETTING)
 
     subscribes, queue = load_data(engine)
 
@@ -57,14 +57,14 @@ async def run():
     sys.exit()
 
 
-async def run_twap(engine: MAEngine, queue: asyncio.Queue):
+async def run_twap(engine: MainEngine, queue: asyncio.Queue):
     while not queue.empty():
         data = await queue.get()
         twap = TWAP(engine, data[0], data[1])
         await twap.run()
         queue.task_done()
 
-def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
+def load_data(engine: MainEngine) -> Tuple[Set[str], asyncio.Queue]:
     """
     Load and process data from the specified csv file.\n
     Output a set of symbol subscriptions and a queue of order requests.
@@ -105,7 +105,7 @@ def load_data(engine: MAEngine) -> Tuple[Set[str], asyncio.Queue]:
     return subscribes, queue
 
 
-def save_position(engine: MAEngine) -> None:
+def save_position(engine: MainEngine) -> None:
     positions: pandas.DataFrame = engine.get_all_positions(True)
     position_dir_path = pathlib.Path(FILE_SETTING.get("POSITION_DIR_PATH"))
 
