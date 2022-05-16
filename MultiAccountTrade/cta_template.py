@@ -1,12 +1,9 @@
 
 from abc import ABC, abstractmethod
-import pstats
-
-from pytz import AmbiguousTimeError
 
 
 class CtaTemplate(ABC):
-    def __init__(self) -> None:
+    def __init__(self, cta_engine: ) -> None:
         pass
     
     @abstractmethod
