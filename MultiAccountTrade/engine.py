@@ -313,6 +313,7 @@ class MAEngine():
                         exchange = contract.exchange
                     )
                     self._subscribe(req, gateway_name)
+            self.log(f"Subscribe {vt_symbols}", gateway_name)
 
     def buy(self, vt_symbol: str, volume: float, gateway_name: str) -> List[str]:
         return self._send_taker_order(vt_symbol, volume, Direction.LONG, Offset.OPEN, gateway_name)
@@ -333,8 +334,8 @@ class MAEngine():
             self._cancel_order(req, active_order.gateway_name)
             self.log(f"Cancel active order {active_order.vt_orderid} {active_order.vt_symbol} {active_order.volume - active_order.traded} {active_order.direction.value} {active_order.offset.value}")
 
-    def log(self, msg: str, gateway_name: str = "") -> None:
-        log: LogData = LogData(gateway_name, msg)
+    def log(self, msg: str, gateway_name: str = None, level: int = logging.INFO) -> None:
+        log: LogData = LogData(gateway_name, msg, level)
         event: Event = Event(EVENT_LOG, log)
         self.event_engine.put(event)
 
@@ -390,6 +391,7 @@ class DataEngine(BaseEngine):
         file_path = self.get_data_file_path(gateway_name)
         if pathlib.Path(file_path).exists():
             data = pandas.read_csv(file_path)
+            self.ma_engine.log("Data loaded.", gateway_name)
             return data
         return None
     
@@ -455,32 +457,36 @@ class LogEngine(BaseEngine):
         super().__init__(ma_engine, event_engine, "log")
 
         self.logger: logging.Logger = logging.getLogger("MAEngine")
-        self.logger.setLevel(logging.INFO)
-
         self.formatter = logging.Formatter("%(asctime)s  %(levelname)s: %(message)s")
+        self.logger.setLevel(logging.INFO)
+        
+        self.add_log_dir_path()
+        self.add_file_handler()
+        self.add_console_handler()
 
+        self.register_event()
+    
+    def add_log_dir_path(self) -> None:
         self.log_dir_path = pathlib.Path(FILE_SETTING.get("LOG_DIR_PATH"))
         if not self.log_dir_path.exists():
             self.log_dir_path.mkdir()
 
-        self.add_console_handler()
-        self.add_file_handler()
+    def add_file_handler(self) -> None:
+        file_name = f"{datetime.now().strftime('%Y%m%d')}.log"
+        file_path = self.log_dir_path.joinpath(file_name)
 
-        self.register_event()
+        file_handler = logging.FileHandler(file_path, mode="a", encoding="utf-8")
+        file_handler.setLevel(logging.INFO)
+        file_handler.setFormatter(self.formatter)
+
+        self.logger.addHandler(file_handler)
 
     def add_console_handler(self) -> None:
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(self.formatter)
+
         self.logger.addHandler(console_handler)
-    
-    def add_file_handler(self) -> None:
-        file_name = f"{datetime.now().strftime('%Y%m%d')}.log"
-        file_path = self.log_dir_path.joinpath(file_name)
-        file_handler = logging.FileHandler(file_path, mode="a", encoding="utf-8")
-        file_handler.setLevel(logging.INFO)
-        file_handler.setFormatter(self.formatter)
-        self.logger.addHandler(file_handler)
 
     def process_log_event(self, event: Event) -> None:
         log: LogData = event.data
@@ -491,5 +497,3 @@ class LogEngine(BaseEngine):
 
     def register_event(self) -> None:
         self.event_engine.register(EVENT_LOG, self.process_log_event)
-
-    

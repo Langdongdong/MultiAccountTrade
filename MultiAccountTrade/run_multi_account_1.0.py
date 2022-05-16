@@ -28,7 +28,6 @@ async def run():
     engine = MAEngine([CtpGateway, RohonGateway], ACCOUNT_SETTING)
 
     subscribes, queue = load_data(engine)
-    engine.log("Data loaded")
 
     while True:
         not_inited_gateway_names = [gateway_name for gateway_name in engine.get_all_gateway_names() if not engine.is_gateway_inited(gateway_name)]
