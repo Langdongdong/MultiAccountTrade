@@ -362,6 +362,7 @@ class BaseEngine(ABC):
 class DataEngine(BaseEngine):
     def __init__(self, ma_engine: MAEngine, event_engine: EventEngine) -> None:
         super().__init__(ma_engine, event_engine, "data")
+        
         self.data_file_paths: Dict[str, str] = {}
 
         self.add_data_dir_path()
@@ -399,6 +400,7 @@ class DataEngine(BaseEngine):
 class BackupEngine(BaseEngine):
     def __init__(self, ma_engine: MAEngine, event_engine: EventEngine) -> None:
         super().__init__(ma_engine, event_engine, "backup")
+
         self.backup_datas: Dict[str, pandas.DataFrame]  = {}
         self.backup_file_paths: Dict[str, str] = {}
 

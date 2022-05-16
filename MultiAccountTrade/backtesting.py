@@ -11,6 +11,7 @@ from MultiAccountTrade.constant import BacktestingMode
 
 class BacktestingEngine:
     def __init__(self, setting: Dict[str, str]) -> None:
+        self.vt_symbols: List[str] = []
         self.mode: BacktestingMode = BacktestingMode.BAR
         self.history_data: List[BaseData] = []
 
