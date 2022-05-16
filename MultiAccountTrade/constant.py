@@ -9,7 +9,7 @@ NIGHT_START = datetime.time(20, 45)
 NIGHT_END = datetime.time(2, 45)
 
 class OrderMode(Enum):
-    BUY = "OPEN_BUY"
-    SELL = "CLOSE_SELL"
-    SHORT = "OPEN_SELL"
-    COVER = "CLOSE_BUY"
+    BUY = "OPEN BUY"
+    SELL = "CLOSE SELL"
+    SHORT = "OPEN SELL"
+    COVER = "CLOSE BUY"

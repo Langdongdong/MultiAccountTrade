@@ -1,5 +1,4 @@
 import logging, pathlib, pandas
-from numpy import logaddexp
 
 from abc import ABC
 from copy import copy
@@ -47,6 +46,7 @@ class MAEngine():
     Only use for CTP like api.
     """
     def __init__(self, gateway_classes: Sequence[Type[BaseGateway]], settings: Dict[str, Dict[str, str]]) -> None:
+
         self.ticks: Dict[str, TickData] = {}
         self.orders: Dict[str, OrderData] = {}
         self.trades: Dict[str, TradeData] = {}
@@ -60,9 +60,7 @@ class MAEngine():
         self.event_engine.start()
 
         self.engines: Dict[str, BaseEngine] = {}
-        self._add_engine(DataEngine)
-        self._add_engine(BackupEngine)
-        self._add_engine(LogEngine)
+        self._add_engines()
 
         self.gateways: Dict[str, BaseGateway] = {}
         self.gateway_classes: Dict[str, Type[BaseGateway]] = {}
@@ -70,8 +68,18 @@ class MAEngine():
         self._add_gateway_classes(gateway_classes)
         self._add_gateways(settings)
         self._connect_gateways(settings)
-        
 
+        self.log("Engine inited")
+
+    def _add_engine(self, engine_class: Any) -> "BaseEngine":
+        engine: BaseEngine = engine_class(self, self.event_engine)
+        self.engines[engine.engine_name] = engine
+        return engine
+
+    def _add_engines(self) -> None:
+        self._add_engine(DataEngine)
+        self._add_engine(BackupEngine)
+        self._add_engine(LogEngine)
 
     def _add_gateway(self, gateway_class_name: str, gateway_name: str) -> None:
         gateway_class: Optional[Type[BaseGateway]] = self.get_gateway_class(gateway_class_name)
@@ -96,11 +104,6 @@ class MAEngine():
     def _add_subscribe_gateway_name(self) -> None:
         if self.susbcribe_gateway_name is None:
             self.susbcribe_gateway_name = self.get_all_gateways()[0].gateway_name
-
-    def _add_engine(self, engine_class: Any) -> "BaseEngine":
-        engine: BaseEngine = engine_class(self, self.event_engine)
-        self.engines[engine.engine_name] = engine
-        return engine
 
     def _connect(self, setting: Dict[str, str], gateway_name: str) -> None:
         gateway = self.get_gateway(gateway_name)
@@ -325,12 +328,10 @@ class MAEngine():
 
     def cancel_active_order(self, vt_orderid: str) -> None:
         active_order: Optional[OrderData] = self.get_active_order(vt_orderid)
-        if active_order is None:
-            return
-        
-        req: CancelRequest = active_order.create_cancel_request()
-        self._cancel_order(req, active_order.gateway_name)
-        self.log()
+        if active_order:
+            req: CancelRequest = active_order.create_cancel_request()
+            self._cancel_order(req, active_order.gateway_name)
+            self.log(f"Cancel active order {active_order.vt_orderid} {active_order.vt_symbol} {active_order.volume - active_order.traded} {active_order.direction.value} {active_order.offset.value}")
 
     def log(self, msg: str, gateway_name: str = "") -> None:
         log: LogData = LogData(gateway_name, msg)

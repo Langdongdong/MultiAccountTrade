@@ -2,7 +2,7 @@ import asyncio, math
 from typing import List, Dict
 
 from pandas import DataFrame
-from MultiAccountTrade.config import TWAP_SETTING
+from config import TWAP_SETTING
 
 from engine import  MAEngine
 from constant import OrderMode
@@ -79,4 +79,4 @@ def backup(engine: MAEngine, gateway_name: str, request: OrderAsking, left_volum
 
     engine.backup(gateway_name)
 
-    engine.log(f"Backup {request.vt_symbol} {request.order_mode.value} left {left_volume}", gateway_name)
+    engine.log(f"Backup {request.vt_symbol} {request.order_mode.value} left volume {left_volume}", gateway_name)

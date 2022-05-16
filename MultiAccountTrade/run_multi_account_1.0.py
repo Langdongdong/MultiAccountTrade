@@ -26,7 +26,6 @@ async def run():
     #     await asyncio.sleep(5)
 
     engine = MAEngine([CtpGateway, RohonGateway], ACCOUNT_SETTING)
-    engine.log("Engine inited")
 
     subscribes, queue = load_data(engine)
     engine.log("Data loaded")
@@ -44,7 +43,7 @@ async def run():
     await asyncio.sleep(1)
 
     tasks = []
-    for i in range(len(engine.gateways) * 5):
+    for i in range(len(engine.gateways) * 10):
         tasks.append(asyncio.create_task(run_twap(engine, queue)))
 
     await queue.join()
