@@ -171,7 +171,7 @@ class MainEngine():
             if contract.exchange in [Exchange.SHFE, Exchange.INE]:
                 if not position.yd_volume:
                     req.offset = Offset.CLOSETODAY
-                elif position.volume == position.yd_volume:
+                elif position.yd_volume >= req.volume:
                     req.offset = Offset.CLOSEYESTERDAY
                 else:
                     req.volume = position.yd_volume - position.frozen
