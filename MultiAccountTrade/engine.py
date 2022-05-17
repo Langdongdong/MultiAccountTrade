@@ -1,4 +1,3 @@
-from importlib.resources import path
 import logging, pathlib, pandas
 
 from abc import ABC, abstractmethod
@@ -82,7 +81,7 @@ class MainEngine():
         self._add_engine(LogEngine)
 
     def _add_gateway(self, gateway_class_name: str, gateway_name: str) -> None:
-        gateway_class: Optional[Type[BaseGateway]] = self.get_gateway_class(gateway_class_name)
+        gateway_class = self.get_gateway_class(gateway_class_name)
         if gateway_class:
             gateway = gateway_class(self.event_engine, gateway_name)
             self.gateways[gateway.gateway_name] = gateway
@@ -131,8 +130,8 @@ class MainEngine():
         reqs: List[OrderRequest] = []
         vt_orderids: List[str] = []
         
-        tick: TickData = self.get_tick(vt_symbol)
-        contract: ContractData = self.get_contract(vt_symbol)
+        tick = self.get_tick(vt_symbol)
+        contract = self.get_contract(vt_symbol)
 
         if tick is None or contract is None:
             vt_orderids.append("")
@@ -299,18 +298,18 @@ class MainEngine():
         return get_df(list(self.accounts.values()), use_df) 
 
     def is_gateway_inited(self, gateway_name: str) -> bool:
-        gateway: Optional[BaseGateway] = self.get_gateway(gateway_name)
+        gateway = self.get_gateway(gateway_name)
         if gateway:
             return gateway.td_api.contract_inited
         return False
 
     def susbcribe(self, vt_symbols: List[str]) -> None:
-        gateway_name: Optional[BaseGateway] = self.get_subscribe_gateway_name()
+        gateway_name = self.get_subscribe_gateway_name()
         if gateway_name:
             for vt_symbol in vt_symbols:
-                contract: Optional[ContractData] = self.get_contract(vt_symbol)
+                contract = self.get_contract(vt_symbol)
                 if contract:
-                    req: SubscribeRequest = SubscribeRequest(
+                    req = SubscribeRequest(
                         symbol = contract.symbol,
                         exchange = contract.exchange
                     )
@@ -330,15 +329,15 @@ class MainEngine():
         return self._send_taker_order(vt_symbol, volume, Direction.LONG, Offset.CLOSE, gateway_name)
 
     def cancel_active_order(self, vt_orderid: str) -> None:
-        active_order: Optional[OrderData] = self.get_active_order(vt_orderid)
+        active_order = self.get_active_order(vt_orderid)
         if active_order:
-            req: CancelRequest = active_order.create_cancel_request()
+            req = active_order.create_cancel_request()
             self._cancel_order(req, active_order.gateway_name)
             self.log(f"Cancel active order {active_order.vt_orderid} {active_order.vt_symbol} {active_order.volume - active_order.traded} {active_order.direction.value} {active_order.offset.value}")
 
     def log(self, msg: str, gateway_name: str = None, level: int = logging.INFO) -> None:
-        log: LogData = LogData(gateway_name, msg, level)
-        event: Event = Event(EVENT_LOG, log)
+        log = LogData(gateway_name, msg, level)
+        event = Event(EVENT_LOG, log)
         self.event_engine.put(event)
 
     def close(self) -> None:
@@ -452,8 +451,8 @@ class DataEngine(BaseEngine):
         self.datas.pop(gateway_name, None)
 
     def backup_data(self, gateway_name: str) -> None:
-        data: pandas.DataFrame = self.get_data(gateway_name)
-        file_path: str = self.get_backup_file_path(gateway_name)
+        data = self.get_data(gateway_name)
+        file_path = self.get_backup_file_path(gateway_name)
         data.to_csv(file_path, index=False)
 
     def close(self) -> None:

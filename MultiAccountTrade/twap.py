@@ -68,7 +68,7 @@ class TWAP():
 
 
 def backup(engine: MainEngine, gateway_name: str, request: OrderAsking, left_volume: float):
-    data: DataFrame = engine.get_backup_data(gateway_name)
+    data: DataFrame = engine.get_data(gateway_name)
 
     idx = data.loc[
         (data["ContractID"] == request.ContractID) &
