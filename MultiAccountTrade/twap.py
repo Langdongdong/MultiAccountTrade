@@ -1,4 +1,5 @@
 import asyncio, math
+from turtle import left
 from typing import List, Dict
 
 from pandas import DataFrame
@@ -67,22 +68,23 @@ class TWAP():
         return max(float(math.floor(self.request.volume / (self.time / self.interval))), 1.0)
 
 
-def backup(engine: MainEngine, gateway_name: str, request: OrderAsking, left_volume: float):
-    data: DataFrame = engine.get_data(gateway_name)
+    def backup(self):
+        data: DataFrame = self.engine.get_data(self.gateway_name)
+        left_volume = self.request.volume - self.traded_volume
 
-    idx = data.loc[
-        (data["ContractID"] == request.ContractID) &
-        (data["Op1"] == request.Op1) &
-        (data["Op2"] == request.Op2)
-    ].index.values[0]
+        idx = data.loc[
+            (data["ContractID"] == self.request.ContractID) &
+            (data["Op1"] == self.request.Op1) &
+            (data["Op2"] == self.request.Op2)
+        ].index.values[0]
 
-    if left_volume == 0:
-        data.drop(index=idx, inplace=True)
-    else:
-        data.loc[idx, "Num"] = left_volume
+        if left_volume == 0:
+            data.drop(index=idx, inplace=True)
+        else:
+            data.loc[idx, "Num"] = left_volume
 
-    if data.empty:
-        engine.delete_data(gateway_name)
-        engine.delete_backup_file(gateway_name)
-    else:
-        engine.backup_data(gateway_name)
+        if data.empty:
+            self.engine.delete_data(self.gateway_name)
+            self.engine.delete_backup_file(self.gateway_name)
+        else:
+            self.engine.backup_data(self.gateway_name)
