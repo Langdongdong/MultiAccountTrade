@@ -34,11 +34,8 @@ async def run():
         if len(not_inited_gateway_names) == 0:
             break
         await asyncio.sleep(3)
-    engine.log("All gateways inited")
-
+        
     engine.susbcribe(list(subscribes))
-    engine.log("Symbols subscribed")
-
     await asyncio.sleep(3)
 
     tasks = []

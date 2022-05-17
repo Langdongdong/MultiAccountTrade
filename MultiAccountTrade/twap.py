@@ -30,6 +30,9 @@ class TWAP():
             self.cancel_active_orders()
             await asyncio.sleep(1)
             self.update_traded_volume()
+
+            self.engine.log(f"{self.request.vt_symbol} {self.request.order_mode.value} left {self.request.volume - self.traded_volume} volume", self.gateway_name)
+
             backup(
                 self.engine,
                 self.gateway_name,
@@ -52,16 +55,13 @@ class TWAP():
 
     def cancel_active_orders(self) -> None:
         for vt_orderid in self.vt_orderids:
-            active_order = self.engine.get_active_order(vt_orderid)
-            if active_order:
-                self.engine.canor
             self.engine.cancel_active_order(vt_orderid)
 
     def update_traded_volume(self) -> None:
         for vt_orderid in self.vt_orderids:
             order = self.engine.get_order(vt_orderid)
             if order:
-                self.traded_volume += order.traded        
+                self.traded_volume += order.traded
 
     def get_twap_volume(self) -> float:
         return max(float(math.floor(self.request.volume / (self.time / self.interval))), 1.0)
@@ -86,5 +86,3 @@ def backup(engine: MainEngine, gateway_name: str, request: OrderAsking, left_vol
         engine.delete_backup_file(gateway_name)
     else:
         engine.backup(gateway_name)
-
-    engine.log(f"Backup {request.vt_symbol} {request.order_mode.value} left volume {left_volume}", gateway_name)
