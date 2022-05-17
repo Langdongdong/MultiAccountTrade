@@ -34,7 +34,7 @@ class TWAP():
 
             self.engine.log(f"{self.request.vt_symbol} {self.request.order_mode.value} left {self.request.volume - self.traded_volume} volume", self.gateway_name)
 
-            backup(
+            self.backup(
                 self.engine,
                 self.gateway_name,
                 self.request,
