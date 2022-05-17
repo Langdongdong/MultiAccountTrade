@@ -7,7 +7,7 @@ from vnpy.trader.object import(
     TickData
 )
 
-from MultiAccountTrade.constant import BacktestingMode
+from constant import BacktestingMode
 
 class BacktestingEngine:
     def __init__(self, setting: Dict[str, str]) -> None:

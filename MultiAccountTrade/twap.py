@@ -75,8 +75,16 @@ def backup(engine: MainEngine, gateway_name: str, request: OrderAsking, left_vol
         (data["Op1"] == request.Op1) &
         (data["Op2"] == request.Op2)
     ].index.values[0]
-    data.loc[idx, "Num"] = left_volume
 
-    engine.backup(gateway_name)
+    if left_volume == 0:
+        data.drop(index=idx, inplace=True)
+    else:
+        data.loc[idx, "Num"] = left_volume
+
+    if data.empty:
+        engine.delete_backup_data(gateway_name)
+        engine.delete_backup_file(gateway_name)
+    else:
+        engine.backup(gateway_name)
 
     engine.log(f"Backup {request.vt_symbol} {request.order_mode.value} left volume {left_volume}", gateway_name)

@@ -39,7 +39,7 @@ async def run():
     engine.susbcribe(list(subscribes))
     engine.log("Symbols subscribed")
 
-    await asyncio.sleep(1)
+    await asyncio.sleep(3)
 
     tasks = []
     for i in range(len(engine.gateways) * 10):

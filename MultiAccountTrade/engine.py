@@ -159,11 +159,13 @@ class MainEngine():
             else:
                 position = self.get_position(f"{gateway_name}.{contract.vt_symbol}.{Direction.LONG.value}")
                 
-            if not position or position.volume - position.frozen < volume:
+            if not position:
                 vt_orderids.append("")
                 return vt_orderids
-
-            req.volume = position.volume - position.frozen
+            elif position.volume - position.frozen < volume:
+                vt_orderids.append("")
+                self.log("No enough close volume", gateway_name)
+                return vt_orderids
 
             if contract.exchange in [Exchange.SHFE, Exchange.INE]:
                 if not position.yd_volume:
@@ -392,7 +394,7 @@ class DataEngine(BaseEngine):
         file_path = self.get_data_file_path(gateway_name)
         if pathlib.Path(file_path).exists():
             data = pandas.read_csv(file_path)
-            self.main_engine.log("Data loaded.", gateway_name)
+            self.main_engine.log("Data loaded", gateway_name)
             return data
         return None
     
@@ -408,12 +410,18 @@ class BackupEngine(BaseEngine):
         self.add_function()
 
     def add_function(self) -> None:
+        self.main_engine.add_backup_dir_path = self.add_backup_dir_path
         self.main_engine.get_backup_dir_path = self.get_backup_dir_path
+
         self.main_engine.add_backup_file_path = self.add_backup_file_path
         self.main_engine.get_backup_file_path = self.get_backup_file_path
+        
         self.main_engine.add_backup_data = self.add_backup_data
         self.main_engine.get_backup_data = self.get_backup_data
         self.main_engine.load_backup_data = self.load_backup_data
+        self.main_engine.delete_backup_data = self.delete_backup_data
+        self.main_engine.delete_backup_file = self.delete_backup_file
+
         self.main_engine.backup = self.backup
 
     def add_backup_dir_path(self) -> None:
@@ -436,13 +444,21 @@ class BackupEngine(BaseEngine):
     def get_backup_data(self, gateway_name: str) -> Optional[Any]:
         return self.backup_datas.get(gateway_name)
 
-    def load_backup_data(self, gateway_name:str) -> Optional[pandas.DataFrame]:
-        file_path = self.get_backup_file_path(gateway_name)
-        if pathlib.Path(file_path).exists():
+    def load_backup_data(self, gateway_name: str) -> Optional[pandas.DataFrame]:
+        file_path = pathlib.Path(self.get_backup_file_path(gateway_name))
+        if file_path.exists():
             data = pandas.read_csv(file_path)
             self.add_backup_data(gateway_name, data)
             return data
         return None
+
+    def delete_backup_data(self, gateway_name: str) -> None:
+        self.backup_datas.pop(gateway_name, None)
+
+    def delete_backup_file(self, gateway_name: str) -> None:
+        file_path = pathlib.Path(self.get_backup_file_path(gateway_name))
+        if file_path.exists():
+            file_path.unlink()
 
     def backup(self, gateway_name: str) -> None:
         data: pandas.DataFrame = self.get_backup_data(gateway_name)
