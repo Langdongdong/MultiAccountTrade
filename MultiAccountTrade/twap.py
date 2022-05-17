@@ -82,7 +82,7 @@ def backup(engine: MainEngine, gateway_name: str, request: OrderAsking, left_vol
         data.loc[idx, "Num"] = left_volume
 
     if data.empty:
-        engine.delete_backup_data(gateway_name)
+        engine.delete_data(gateway_name)
         engine.delete_backup_file(gateway_name)
     else:
-        engine.backup(gateway_name)
+        engine.backup_data(gateway_name)

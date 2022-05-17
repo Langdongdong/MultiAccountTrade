@@ -1,6 +1,7 @@
+from importlib.resources import path
 import logging, pathlib, pandas
 
-from abc import ABC
+from abc import ABC, abstractmethod
 from copy import copy
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Sequence, Type
@@ -78,7 +79,6 @@ class MainEngine():
 
     def _add_engines(self) -> None:
         self._add_engine(DataEngine)
-        self._add_engine(BackupEngine)
         self._add_engine(LogEngine)
 
     def _add_gateway(self, gateway_class_name: str, gateway_name: str) -> None:
@@ -357,139 +357,130 @@ class BaseEngine(ABC):
         self.event_engine = event_engine
         self.engine_name = engine_name
 
+    @abstractmethod
     def close(self) -> None:
         pass
 
 
 class DataEngine(BaseEngine):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
-        super().__init__(main_engine, event_engine, "data")
+        super().__init__(main_engine, event_engine, "DataEngine")
+
+        self.datas: Dict[str, pandas.DataFrame]  = {}
         
-        self.data_file_paths: Dict[str, str] = {}
-
-        self.add_data_dir_path()
-        self.add_function()
-
-    def add_function(self) -> None:
-        self.main_engine.get_data_dir_path = self.get_data_dir_path
-        self.main_engine.add_data_file_path = self.add_data_file_path
-        self.main_engine.get_data_file_path = self.get_data_file_path
-        self.main_engine.load_data = self.load_data
-
-    def add_data_dir_path(self) -> None:
-        self.data_dir_path = pathlib.Path(FILE_SETTING.get("ORDER_DIR_PATH"))
-        if not self.data_dir_path.exists():
-            self.data_dir_path.mkdir()
-
-    def get_data_dir_path(self) -> str:
-        return self.data_dir_path
-
-    def add_data_file_path(self, gateway_name: str, file_name: str) -> None:
-        self.data_file_paths[gateway_name] = self.data_dir_path.joinpath(file_name)
-
-    def get_data_file_path(self, gateway_name: str) -> str:
-        return self.data_file_paths.get(gateway_name)
-
-    def load_data(self, gateway_name: str) -> Optional[pandas.DataFrame]:
-        file_path = self.get_data_file_path(gateway_name)
-        if pathlib.Path(file_path).exists():
-            data = pandas.read_csv(file_path)
-            self.main_engine.log("Data loaded", gateway_name)
-            return data
-        return None
-    
-
-class BackupEngine(BaseEngine):
-    def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
-        super().__init__(main_engine, event_engine, "backup")
-
-        self.backup_datas: Dict[str, pandas.DataFrame]  = {}
+        self.load_file_paths: Dict[str, str] = {}
         self.backup_file_paths: Dict[str, str] = {}
 
-        self.add_backup_dir_path()
-        self.add_function()
+        self._add_load_dir_path()
+        self._add_backup_dir_path()
+        self._add_function()
 
-    def add_function(self) -> None:
-        self.main_engine.add_backup_dir_path = self.add_backup_dir_path
-        self.main_engine.get_backup_dir_path = self.get_backup_dir_path
+    def _add_load_dir_path(self) -> None:
+        self.load_dir_path = pathlib.Path(FILE_SETTING.get("ORDER_DIR_PATH"))
+        if not self.load_dir_path.exists():
+            self.load_dir_path.mkdir()
 
-        self.main_engine.add_backup_file_path = self.add_backup_file_path
-        self.main_engine.get_backup_file_path = self.get_backup_file_path
-        
-        self.main_engine.add_backup_data = self.add_backup_data
-        self.main_engine.get_backup_data = self.get_backup_data
-        self.main_engine.load_backup_data = self.load_backup_data
-        self.main_engine.delete_backup_data = self.delete_backup_data
-        self.main_engine.delete_backup_file = self.delete_backup_file
-
-        self.main_engine.backup = self.backup
-
-    def add_backup_dir_path(self) -> None:
+    def _add_backup_dir_path(self) -> None:
         self.backup_dir_path = pathlib.Path(FILE_SETTING.get("BACKUP_DIR_PATH"))
         if not self.backup_dir_path.exists():
             self.backup_dir_path.mkdir()
 
-    def get_backup_dir_path(self) -> str:
+    def _add_function(self) -> None:
+        self.main_engine.get_load_dir_path = self.get_load_dir_path
+        self.main_engine.get_backup_dir_path = self.get_backup_dir_path
+
+        self.main_engine.add_load_file_path = self.add_load_file_path
+        self.main_engine.get_load_file_path = self.get_load_file_path
+        self.main_engine.delete_load_file = self.delete_load_file
+
+        self.main_engine.add_backup_file_path = self.add_backup_file_path
+        self.main_engine.get_backup_file_path = self.get_backup_file_path
+        self.main_engine.delete_backup_file = self.delete_backup_file
+
+        self.main_engine.add_data = self.add_data
+        self.main_engine.get_data = self.get_data
+        self.main_engine.load_data = self.load_data
+        self.main_engine.delete_data = self.delete_data
+        self.main_engine.backup_data = self.backup_data
+
+    def get_load_dir_path(self) -> pathlib.Path:
+        return self.load_dir_path
+
+    def get_backup_dir_path(self) -> pathlib.Path:
         return self.backup_dir_path
+    
+    def add_load_file_path(self, gateway_name: str, file_name: str) -> None:
+        self.load_file_paths[gateway_name] = self.load_dir_path.joinpath(file_name)
+
+    def get_load_file_path(self, gateway_name: str) -> pathlib.Path:
+        return self.load_file_paths.get(gateway_name)
+
+    def delete_load_file(self, gateway_name: str) -> None:
+        file_path = self.get_load_file_path(gateway_name)
+        if file_path.exists():
+            file_path.unlink()
 
     def add_backup_file_path(self, gateway_name: str, file_name: str) -> None:
         self.backup_file_paths[gateway_name] = self.backup_dir_path.joinpath(file_name)
     
-    def get_backup_file_path(self, gateway_name: str) -> str:
+    def get_backup_file_path(self, gateway_name: str) -> pathlib.Path:
         return self.backup_file_paths.get(gateway_name)
 
-    def add_backup_data(self, gateway_name: str, data: pandas.DataFrame) -> None:
-        self.backup_datas[gateway_name] = data
-
-    def get_backup_data(self, gateway_name: str) -> Optional[Any]:
-        return self.backup_datas.get(gateway_name)
-
-    def load_backup_data(self, gateway_name: str) -> Optional[pandas.DataFrame]:
-        file_path = pathlib.Path(self.get_backup_file_path(gateway_name))
-        if file_path.exists():
-            data = pandas.read_csv(file_path)
-            self.add_backup_data(gateway_name, data)
-            return data
-        return None
-
-    def delete_backup_data(self, gateway_name: str) -> None:
-        self.backup_datas.pop(gateway_name, None)
-
     def delete_backup_file(self, gateway_name: str) -> None:
-        file_path = pathlib.Path(self.get_backup_file_path(gateway_name))
+        file_path = self.get_backup_file_path(gateway_name)
         if file_path.exists():
             file_path.unlink()
 
-    def backup(self, gateway_name: str) -> None:
-        data: pandas.DataFrame = self.get_backup_data(gateway_name)
-        backup_file_path: str = self.get_backup_file_path(gateway_name)
-        data.to_csv(backup_file_path, index=False)
+    def add_data(self, gateway_name: str, data: pandas.DataFrame) -> None:
+        self.datas[gateway_name] = data
+
+    def get_data(self, gateway_name: str) -> Optional[pandas.DataFrame]:
+        return self.datas.get(gateway_name)
+
+    def load_data(self, gateway_name: str) -> pandas.DataFrame:
+        file_path = self.get_backup_file_path(gateway_name)
+        if not file_path.exists():
+            file_path = self.get_load_file_path(gateway_name)
+
+        data = pandas.read_csv(file_path)
+        self.add_data(gateway_name, data)
+
+        self.main_engine.log("Data loaded", gateway_name)
+        return data
+
+    def delete_data(self, gateway_name: str) -> None:
+        self.datas.pop(gateway_name, None)
+
+    def backup_data(self, gateway_name: str) -> None:
+        data: pandas.DataFrame = self.get_data(gateway_name)
+        file_path: str = self.get_backup_file_path(gateway_name)
+        data.to_csv(file_path, index=False)
 
     def close(self) -> None:
-        for gateway_name, data in self.backup_datas.items():
-            data.to_csv(self.get_backup_file_path(gateway_name), index = False)
+        return super().close()
 
 
 class LogEngine(BaseEngine):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
-        super().__init__(main_engine, event_engine, "log")
+        super().__init__(main_engine, event_engine, "LogEngine")
 
         self.logger: logging.Logger = logging.getLogger("MainEngine")
         self.formatter = logging.Formatter("%(asctime)s  %(levelname)s: %(message)s")
         self.logger.setLevel(logging.INFO)
         
-        self.add_log_dir_path()
-        self.add_file_handler()
-        self.add_console_handler()
+        self._add_log_dir_path()
 
-        self.register_event()
+        self._add_file_handler()
+        self._add_console_handler()
+
+        self._register_event()
     
-    def add_log_dir_path(self) -> None:
+    def _add_log_dir_path(self) -> None:
         self.log_dir_path = pathlib.Path(FILE_SETTING.get("LOG_DIR_PATH"))
         if not self.log_dir_path.exists():
             self.log_dir_path.mkdir()
 
-    def add_file_handler(self) -> None:
+    def _add_file_handler(self) -> None:
         file_name = f"{datetime.now().strftime('%Y%m%d')}.log"
         file_path = self.log_dir_path.joinpath(file_name)
 
@@ -499,19 +490,22 @@ class LogEngine(BaseEngine):
 
         self.logger.addHandler(file_handler)
 
-    def add_console_handler(self) -> None:
+    def _add_console_handler(self) -> None:
         console_handler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(self.formatter)
 
         self.logger.addHandler(console_handler)
 
-    def process_log_event(self, event: Event) -> None:
+    def _process_log_event(self, event: Event) -> None:
         log: LogData = event.data
         if log.gateway_name:
             self.logger.log(log.level, f"{log.gateway_name} {log.msg}")
         else:
             self.logger.log(log.level, log.msg)
 
-    def register_event(self) -> None:
-        self.event_engine.register(EVENT_LOG, self.process_log_event)
+    def _register_event(self) -> None:
+        self.event_engine.register(EVENT_LOG, self._process_log_event)
+
+    def close(self) -> None:
+        return super().close()

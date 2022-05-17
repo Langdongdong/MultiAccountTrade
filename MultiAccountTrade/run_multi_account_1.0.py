@@ -34,7 +34,7 @@ async def run():
         if len(not_inited_gateway_names) == 0:
             break
         await asyncio.sleep(3)
-        
+
     engine.susbcribe(list(subscribes))
     await asyncio.sleep(3)
 
@@ -70,7 +70,7 @@ def load_data(engine: MainEngine) -> Tuple[Set[str], asyncio.Queue]:
     queue: asyncio.Queue = asyncio.Queue()
 
     try:
-        iter = pathlib.Path(engine.get_data_dir_path()).iterdir()
+        iter = pathlib.Path(engine.get_load_dir_path()).iterdir()
         last = next(iter)
         for last in iter: pass
         file_date = re.match("[0-9]*",last.name).group()
@@ -79,14 +79,10 @@ def load_data(engine: MainEngine) -> Tuple[Set[str], asyncio.Queue]:
         sys.exit(0)
 
     for gateway_name in engine.get_all_gateway_names():
-        engine.add_data_file_path(gateway_name, f"{file_date}_{gateway_name}.csv")
+        engine.add_load_file_path(gateway_name, f"{file_date}_{gateway_name}.csv")
         engine.add_backup_file_path(gateway_name, f"{file_date}_{gateway_name}_backup.csv")
 
-        requests: pandas.DataFrame = engine.load_backup_data(gateway_name)
-        if requests is None:
-            requests = engine.load_data(gateway_name)
-            engine.add_backup_data(gateway_name, requests)
-            engine.backup(gateway_name)
+        requests: pandas.DataFrame = engine.load_data(gateway_name)
 
         if is_night_period():
             requests = requests[requests["ContractID"].apply(lambda x:(re.match("[^0-9]*", x, re.I).group().upper() not in AM_SYMBOL))]
