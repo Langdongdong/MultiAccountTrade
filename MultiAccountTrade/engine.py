@@ -174,7 +174,7 @@ class MainEngine():
                 elif position.yd_volume >= req.volume:
                     req.offset = Offset.CLOSEYESTERDAY
                 else:
-                    req.volume = position.yd_volume - position.frozen
+                    req.volume = position.yd_volume
                     req.offset = Offset.CLOSEYESTERDAY
 
                     req_td = copy(req)
