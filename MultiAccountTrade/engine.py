@@ -135,6 +135,7 @@ class MainEngine():
 
         if tick is None or contract is None:
             vt_orderids.append("")
+            self.log("Tick or contract data is none", gateway_name)
             return vt_orderids
 
         if direction == Direction.LONG:
@@ -160,6 +161,7 @@ class MainEngine():
                 
             if not position:
                 vt_orderids.append("")
+                self.log("Position data is none", gateway_name)
                 return vt_orderids
             elif position.volume - position.frozen < volume:
                 vt_orderids.append("")
