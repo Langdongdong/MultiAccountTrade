@@ -10,11 +10,11 @@ class OrderAsking:
     volume: float
 
     def __post_init__(self) -> None:
-        self.vt_symbol = self.convert_to_vt_symbol(self.ContractID)
-        self.order_mode = self.convert_to_vt_order_mode(self.Op1, self.Op2)
+        self.vt_symbol = OrderAsking.convert_to_vt_symbol(self.ContractID)
+        self.order_mode = OrderAsking.convert_to_vt_order_mode(self.Op1, self.Op2)
 
-    @classmethod
-    def convert_to_vt_symbol(self, symbol: str) -> str:
+    @staticmethod
+    def convert_to_vt_symbol(symbol: str) -> str:
         spl = symbol.split(".")
         pre = spl[0].lower()
         suf = spl[1]
@@ -28,8 +28,8 @@ class OrderAsking:
 
         return f"{pre}.{suf}"
 
-    @classmethod
-    def convert_to_vt_order_mode(self, Op1: str, Op2: str) -> OrderMode:
+    @staticmethod
+    def convert_to_vt_order_mode(Op1: str, Op2: str) -> OrderMode:
         if Op1 == "Open":
             if Op2 == "Buy":
                 return OrderMode.BUY
