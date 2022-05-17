@@ -463,7 +463,7 @@ class LogEngine(BaseEngine):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
         super().__init__(main_engine, event_engine, "LogEngine")
 
-        self.logger: logging.Logger = logging.getLogger("MainEngine")
+        self.logger = logging.getLogger("MainEngine")
         self.formatter = logging.Formatter("%(asctime)s  %(levelname)s: %(message)s")
         self.logger.setLevel(logging.INFO)
         
