@@ -1,9 +1,11 @@
 
 from abc import ABC, abstractmethod
 
+from cta_engine import CtaEngine
+
 
 class CtaTemplate(ABC):
-    def __init__(self, cta_engine: ) -> None:
+    def __init__(self, cta_engine: CtaEngine) -> None:
         pass
     
     @abstractmethod
