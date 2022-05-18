@@ -14,34 +14,31 @@ from vnpy.trader.constant import Direction
 
 async def run():
     engine = MainEngine()
-    # engine.connect()
+    engine.connect()
 
     subscribes, queue = load_data(engine)
 
-    # while True:
-    #     not_inited_gateway_names = [gateway_name for gateway_name in engine.get_all_gateway_names() if not engine.is_gateway_inited(gateway_name)]
-    #     if not not_inited_gateway_names:
-    #         break
-    #     await asyncio.sleep(3)
+    while True:
+        not_inited_gateway_names = [gateway_name for gateway_name in engine.get_all_gateway_names() if not engine.is_gateway_inited(gateway_name)]
+        if not not_inited_gateway_names:
+            break
+        await asyncio.sleep(3)
 
-    # engine.susbcribe(subscribes)
-    # await asyncio.sleep(3)
+    engine.susbcribe(subscribes)
+    await asyncio.sleep(5)
 
-    # tasks = []
-    # for i in range(len(engine.gateways) * 10):
-    #     tasks.append(asyncio.create_task(run_twap(engine, queue)))
+    tasks = []
+    for i in range(len(engine.gateways) * 10):
+        tasks.append(asyncio.create_task(run_twap(engine, queue)))
 
-    # await queue.join()
-    # engine.log("Complete all TWAP")
+    await queue.join()
+    await asyncio.gather(*tasks, return_exceptions=True)
 
-    # await asyncio.gather(*tasks, return_exceptions=True)
-
-    # save_position(engine)
-    # engine.log("Positions files saved")
+    save_position(engine)
+    engine.log("Position file saved")
 
     engine.close()
     sys.exit()
-
 
 async def run_twap(engine: MainEngine, queue: asyncio.Queue):
     while not queue.empty():
@@ -79,7 +76,6 @@ def load_data(engine: MainEngine) -> Tuple[Set[str], asyncio.Queue]:
         subscribes.update([OrderAsking.convert_to_vt_symbol(symbol) for symbol in requests["ContractID"].tolist()])
         if engine.is_night_trading_time():
             subscribes = engine.filter_am_symbol(subscribes)
-            # requests = requests[requests["ContractID"].apply(lambda x:(re.match("[^0-9]*", x, re.I).group().upper() not in AM_SYMBOL_SETTING))]
         
         for row in requests.itertuples():
             request = OrderAsking(getattr(row, "ContractID"), getattr(row, "Op1"), getattr(row, "Op2"), getattr(row, "Num"))

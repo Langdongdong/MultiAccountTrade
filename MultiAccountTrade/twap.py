@@ -20,8 +20,6 @@ class TWAP():
         self.traded_volume: float = 0
         self.twap_volume: float = self.get_twap_volume()
 
-        self.engine.log(f"Excecute TWAP {self.request.vt_symbol} {self.request.order_mode.value} {self.request.volume}", self.gateway_name)
-
     async def run(self) -> None:
         while self.traded_volume < self.request.volume:
             self.send_order()
@@ -30,11 +28,9 @@ class TWAP():
             await asyncio.sleep(1)
             self.update_traded_volume()
 
-            self.engine.log(f"{self.request.vt_symbol} {self.request.order_mode.value} left {self.request.volume - self.traded_volume} volume", self.gateway_name)
-
+            self.engine.log(f"Traded {self.request.vt_symbol} {self.request.order_mode.value} {self.traded_volume}", self.gateway_name)
             self.backup()
         
-        self.engine.log(f"Complete TWAP {self.request.vt_symbol}", self.gateway_name)
             
     def send_order(self) -> List[str]:
         volume = min(self.twap_volume, self.request.volume - self.traded_volume)
@@ -81,6 +77,5 @@ class TWAP():
 
         if data.empty:
             data_engine.delete_data(self.gateway_name)
-            data_engine.delete_backup_file(self.gateway_name)
-        else:
-            data_engine.backup_data(self.gateway_name)
+            
+        data_engine.backup_data(self.gateway_name)
