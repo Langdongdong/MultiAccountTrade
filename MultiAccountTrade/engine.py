@@ -115,7 +115,7 @@ class MainEngine():
 
     def _add_engine(self, engine_class: Any) -> "BaseEngine":
         engine: BaseEngine = engine_class(self, self.event_engine)
-        self.engines[engine.engine_name] = engine
+        self.engines[engine_class.__name__] = engine
         return engine
 
     def _add_engines(self) -> None:
@@ -278,8 +278,8 @@ class MainEngine():
     def get_subscribe_gateway_name(self) -> Optional[BaseGateway]:
         return self.susbcribe_gateway_name
 
-    def get_engine(self, engine_name: str) -> Optional["BaseEngine"]:
-        return self.engines.get(engine_name)
+    def get_engine(self, engine_class_name: str) -> Optional["BaseEngine"]:
+        return self.engines.get(engine_class_name)
 
     def get_tick(self, vt_symbol: str, use_df: bool = False) -> Optional[TickData] | pandas.DataFrame:
         return get_df(self.ticks.get(vt_symbol), use_df)
@@ -401,7 +401,6 @@ class BaseEngine(ABC):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine, engine_name: str) -> None:
         self.main_engine: MainEngine = main_engine
         self.event_engine: EventEngine = event_engine
-        self.engine_name: str = engine_name
 
     @abstractmethod
     def close(self) -> None:
@@ -410,7 +409,7 @@ class BaseEngine(ABC):
 
 class DataEngine(BaseEngine):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
-        super().__init__(main_engine, event_engine, "DataEngine")
+        super().__init__(main_engine, event_engine)
 
         self.datas: Dict[str, pandas.DataFrame]  = {}
         
@@ -419,7 +418,6 @@ class DataEngine(BaseEngine):
 
         self._add_load_dir_path()
         self._add_backup_dir_path()
-        self._add_function()
 
     def _add_load_dir_path(self) -> None:
         self.load_dir_path = pathlib.Path(FILE_SETTING.get("ORDER_DIR_PATH"))
@@ -430,24 +428,6 @@ class DataEngine(BaseEngine):
         self.backup_dir_path = pathlib.Path(FILE_SETTING.get("BACKUP_DIR_PATH"))
         if not self.backup_dir_path.exists():
             self.backup_dir_path.mkdir()
-
-    def _add_function(self) -> None:
-        self.main_engine.get_load_dir_path = self.get_load_dir_path
-        self.main_engine.get_backup_dir_path = self.get_backup_dir_path
-
-        self.main_engine.add_load_file_path = self.add_load_file_path
-        self.main_engine.get_load_file_path = self.get_load_file_path
-        self.main_engine.delete_load_file = self.delete_load_file
-
-        self.main_engine.add_backup_file_path = self.add_backup_file_path
-        self.main_engine.get_backup_file_path = self.get_backup_file_path
-        self.main_engine.delete_backup_file = self.delete_backup_file
-
-        self.main_engine.add_data = self.add_data
-        self.main_engine.get_data = self.get_data
-        self.main_engine.load_data = self.load_data
-        self.main_engine.delete_data = self.delete_data
-        self.main_engine.backup_data = self.backup_data
 
     def get_load_dir_path(self) -> pathlib.Path:
         return self.load_dir_path
@@ -516,7 +496,7 @@ class DataEngine(BaseEngine):
 
 class LogEngine(BaseEngine):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
-        super().__init__(main_engine, event_engine, "LogEngine")
+        super().__init__(main_engine, event_engine)
 
         self.logger: logging.Logger = logging.getLogger("MainEngine")
         self.formatter: logging.Formatter = logging.Formatter("%(asctime)s  %(levelname)s: %(message)s")

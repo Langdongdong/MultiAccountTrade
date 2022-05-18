@@ -1,9 +1,9 @@
 import asyncio, math
 from typing import List
 from pandas import DataFrame
-from config import TWAP_SETTING
 
-from engine import  MainEngine
+from engine import  MainEngine, DataEngine
+from config import TWAP_SETTING
 from constant import OrderMode
 from object import OrderAsking
 
@@ -61,7 +61,11 @@ class TWAP():
         return max(float(math.floor(self.request.volume / (self.time / self.interval))), 1.0)
 
     def backup(self):
-        data: DataFrame = self.engine.get_data(self.gateway_name)
+        data_engine: DataEngine = self.engine.get_engine(DataEngine.__name__)
+        if data_engine is None:
+            return
+
+        data: DataFrame = data_engine.get_data(self.gateway_name)
         left_volume = self.request.volume - self.traded_volume
 
         idx = data.loc[
@@ -76,6 +80,7 @@ class TWAP():
             data.loc[idx, "Num"] = left_volume
 
         if data.empty:
-            self.engine.delete_data(self.gateway_name)
+            data_engine.delete_data(self.gateway_name)
+            data_engine.delete_backup_file(self.gateway_name)
         else:
-            self.engine.backup_data(self.gateway_name)
+            data_engine.backup_data(self.gateway_name)
