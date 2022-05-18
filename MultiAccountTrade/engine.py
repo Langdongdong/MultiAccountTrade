@@ -118,10 +118,69 @@ class MainEngine():
     def _send_order(self, req: OrderRequest, gateway_name: str) -> str:
         gateway: Optional[BaseGateway] = self.get_gateway(gateway_name)
         if gateway:
-            vt_orderid = gateway.send_order(req)
-            self.log(f"Order {vt_orderid} {req.vt_symbol} {req.direction.value} {req.offset.value} {req.volume}", gateway_name)
-            return vt_orderid
-        return ""
+            self.log(f"Order {req.vt_symbol} {req.direction.value} {req.offset.value} {req.volume}", gateway_name)
+            return gateway.send_order(req)
+
+    def _send_taker_order(self, vt_symbol: str, volume: float, direction: Direction, offset: Offset, gateway_name: str) -> List[str]:
+        reqs: List[OrderRequest] = []
+        vt_orderids: List[str] = []
+        
+        tick: Optional[TickData] = self.get_tick(vt_symbol)
+        contract: Optional[ContractData] = self.get_contract(vt_symbol)
+
+        if tick is None or contract is None:
+            vt_orderids.append("")
+            self.log(f"{vt_symbol} tick or contract data is None", gateway_name)
+            return vt_orderids
+
+        price: float = tick.ask_price_1 + contract.pricetick * 2 \
+            if direction == Direction.LONG \
+            else tick.bid_price_1 - contract.pricetick * 2
+
+        req = OrderRequest(
+            symbol = contract.symbol,
+            exchange = contract.exchange,
+            price = price,
+            volume = volume,
+            direction = direction,
+            offset = offset,
+            type = OrderType.LIMIT
+        )
+
+        if offset == Offset.CLOSE:
+            position: Optional[PositionData] = self.get_position(f"{gateway_name}.{contract.vt_symbol}.{Direction.SHORT.value}") \
+                if direction == Direction.LONG \
+                else self.get_position(f"{gateway_name}.{contract.vt_symbol}.{Direction.LONG.value}")
+
+            if position is None:
+                vt_orderids.append("")
+                self.log(f"{vt_symbol} {direction.value} position data is None", gateway_name)
+                return vt_orderids
+            elif position.volume - position.frozen < volume:
+                vt_orderids.append("")
+                self.log(f"{vt_symbol} {direction.value} {offset.value} {volume} get no enough position volume to close", gateway_name)
+                return vt_orderids
+
+            if contract.exchange in [Exchange.SHFE, Exchange.INE]:
+                if not position.yd_volume:
+                    req.offset = Offset.CLOSETODAY
+                elif position.yd_volume >= req.volume:
+                    req.offset = Offset.CLOSEYESTERDAY
+                else:
+                    req.volume = position.yd_volume
+                    req.offset = Offset.CLOSEYESTERDAY
+
+                    req_td = copy(req)
+                    req_td.volume = volume - req.volume
+                    req_td.offset = Offset.CLOSETODAY
+                    reqs.append(req_td)
+
+        reqs.append(req)
+
+        for req in reqs:
+            vt_orderids.append(self._send_order(req, gateway_name))
+
+        return vt_orderids
 
     def _cancel_order(self, req: CancelRequest, gateway_name:str) -> None:
         gateway: Optional[BaseGateway] = self.get_gateway(gateway_name)
@@ -256,78 +315,17 @@ class MainEngine():
                     self._subscribe(req, gateway_name)
                     self.log(f"Subscribe {vt_symbol} market data", gateway_name)
 
-    def send_taker_order(self, vt_symbol: str, volume: float, direction: Direction, offset: Offset, gateway_name: str) -> List[str]:
-        reqs: List[OrderRequest] = []
-        vt_orderids: List[str] = []
-        
-        tick: Optional[TickData] = self.get_tick(vt_symbol)
-        contract: Optional[ContractData] = self.get_contract(vt_symbol)
-
-        if tick is None or contract is None:
-            vt_orderids.append("")
-            self.log(f"{vt_symbol} tick or contract data is None", gateway_name)
-            return vt_orderids
-
-        price: float = tick.ask_price_1 + contract.pricetick * 2 \
-            if direction == Direction.LONG \
-            else tick.bid_price_1 - contract.pricetick * 2
-
-        req = OrderRequest(
-            symbol = contract.symbol,
-            exchange = contract.exchange,
-            price = price,
-            volume = volume,
-            direction = direction,
-            offset = offset,
-            type = OrderType.LIMIT
-        )
-
-        if offset == Offset.CLOSE:
-            position: Optional[PositionData] = self.get_position(f"{gateway_name}.{contract.vt_symbol}.{Direction.SHORT.value}") \
-                if direction == Direction.LONG \
-                else self.get_position(f"{gateway_name}.{contract.vt_symbol}.{Direction.LONG.value}")
-
-            if position is None:
-                vt_orderids.append("")
-                self.log(f"{vt_symbol} {direction.value} position data is None", gateway_name)
-                return vt_orderids
-            elif position.volume - position.frozen < volume:
-                vt_orderids.append("")
-                self.log(f"{vt_symbol} {direction.value} {offset.value} {volume} get no enough position volume to close", gateway_name)
-                return vt_orderids
-
-            if contract.exchange in [Exchange.SHFE, Exchange.INE]:
-                if not position.yd_volume:
-                    req.offset = Offset.CLOSETODAY
-                elif position.yd_volume >= req.volume:
-                    req.offset = Offset.CLOSEYESTERDAY
-                else:
-                    req.volume = position.yd_volume
-                    req.offset = Offset.CLOSEYESTERDAY
-
-                    req_td = copy(req)
-                    req_td.volume = volume - req.volume
-                    req_td.offset = Offset.CLOSETODAY
-                    reqs.append(req_td)
-
-        reqs.append(req)
-
-        for req in reqs:
-            vt_orderids.append(self._send_order(req, gateway_name))
-
-        return vt_orderids
-
     def buy(self, vt_symbol: str, volume: float, gateway_name: str) -> List[str]:
-        return self.send_taker_order(vt_symbol, volume, Direction.LONG, Offset.OPEN, gateway_name)
+        return self._send_taker_order(vt_symbol, volume, Direction.LONG, Offset.OPEN, gateway_name)
     
     def sell(self, vt_symbol: str, volume: float, gateway_name: str) -> List[str]:
-        return self.send_taker_order(vt_symbol, volume, Direction.SHORT, Offset.CLOSE, gateway_name)
+        return self._send_taker_order(vt_symbol, volume, Direction.SHORT, Offset.CLOSE, gateway_name)
 
     def short(self, vt_symbol: str, volume: float, gateway_name: str) -> List[str]:
-        return self.send_taker_order(vt_symbol, volume, Direction.SHORT, Offset.OPEN, gateway_name)
+        return self._send_taker_order(vt_symbol, volume, Direction.SHORT, Offset.OPEN, gateway_name)
 
     def cover(self, vt_symbol: str, volume: float, gateway_name: str) -> List[str]:
-        return self.send_taker_order(vt_symbol, volume, Direction.LONG, Offset.CLOSE, gateway_name)
+        return self._send_taker_order(vt_symbol, volume, Direction.LONG, Offset.CLOSE, gateway_name)
 
     def cancel_active_order(self, vt_orderid: str) -> None:
         active_order = self.get_active_order(vt_orderid)
