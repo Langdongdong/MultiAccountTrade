@@ -1,8 +1,8 @@
 import logging, pathlib, pandas
 
-from abc import ABC, abstractmethod
 from copy import copy
 from datetime import datetime
+from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Sequence, Type
 
 from config import FILE_SETTING
@@ -81,7 +81,7 @@ class MainEngine():
         self._add_engine(LogEngine)
 
     def _add_gateway(self, gateway_class_name: str, gateway_name: str) -> None:
-        gateway_class = self.get_gateway_class(gateway_class_name)
+        gateway_class: Optional[Type[BaseGateway]] = self.get_gateway_class(gateway_class_name)
         if gateway_class:
             gateway = gateway_class(self.event_engine, gateway_name)
             self.gateways[gateway.gateway_name] = gateway
@@ -91,6 +91,7 @@ class MainEngine():
             gateway_class_name = setting.get("Gateway")
             if gateway_class_name:
                 self._add_gateway(gateway_class_name, gateway_name)
+
         self._add_subscribe_gateway_name()
 
     def _add_gateway_class(self, gateway_class: Type[BaseGateway]) -> None:
@@ -105,7 +106,7 @@ class MainEngine():
             self.susbcribe_gateway_name = self.get_all_gateways()[0].gateway_name
 
     def _connect(self, setting: Dict[str, str], gateway_name: str) -> None:
-        gateway = self.get_gateway(gateway_name)
+        gateway: Optional[BaseGateway] = self.get_gateway(gateway_name)
         if gateway:
             gateway.connect(setting)
 
@@ -114,15 +115,15 @@ class MainEngine():
             self._connect(setting, gateway_name)
         
     def _subscribe(self, req: SubscribeRequest, gateway_name: str) -> None:
-        gateway = self.get_gateway(gateway_name)
+        gateway: Optional[BaseGateway] = self.get_gateway(gateway_name)
         if gateway:
             gateway.subscribe(req)
 
     def _send_order(self, req: OrderRequest, gateway_name: str) -> str:
-        gateway = self.get_gateway(gateway_name)
+        gateway: Optional[BaseGateway] = self.get_gateway(gateway_name)
         if gateway:
             vt_orderid = gateway.send_order(req)
-            self.log(f"Send order {vt_orderid} {req.vt_symbol} {req.volume} {req.direction.value} {req.offset.value}", gateway_name)
+            self.log(f"Order {vt_orderid} {req.vt_symbol} {req.volume} {req.direction.value} {req.offset.value}", gateway_name)
             return vt_orderid
         return ""
 
@@ -130,8 +131,8 @@ class MainEngine():
         reqs: List[OrderRequest] = []
         vt_orderids: List[str] = []
         
-        tick = self.get_tick(vt_symbol)
-        contract = self.get_contract(vt_symbol)
+        tick: Optional[TickData] = self.get_tick(vt_symbol)
+        contract: Optional[ContractData] = self.get_contract(vt_symbol)
 
         if tick is None or contract is None:
             vt_orderids.append("")
@@ -139,9 +140,9 @@ class MainEngine():
             return vt_orderids
 
         if direction == Direction.LONG:
-            price = tick.ask_price_1 + contract.pricetick * 2
+            price: float = tick.ask_price_1 + contract.pricetick * 2
         else:
-            price = tick.bid_price_1 - contract.pricetick * 2
+            price: float = tick.bid_price_1 - contract.pricetick * 2
 
         req = OrderRequest(
             symbol = contract.symbol,
@@ -155,11 +156,11 @@ class MainEngine():
 
         if offset == Offset.CLOSE:
             if direction == Direction.LONG:
-                position = self.get_position(f"{gateway_name}.{contract.vt_symbol}.{Direction.SHORT.value}")
+                position: Optional[PositionData] = self.get_position(f"{gateway_name}.{contract.vt_symbol}.{Direction.SHORT.value}")
             else:
-                position = self.get_position(f"{gateway_name}.{contract.vt_symbol}.{Direction.LONG.value}")
+                position: Optional[PositionData] = self.get_position(f"{gateway_name}.{contract.vt_symbol}.{Direction.LONG.value}")
                 
-            if not position:
+            if position is None:
                 vt_orderids.append("")
                 self.log("Position data is none", gateway_name)
                 return vt_orderids
@@ -190,7 +191,7 @@ class MainEngine():
         return vt_orderids
 
     def _cancel_order(self, req: CancelRequest, gateway_name:str) -> None:
-        gateway = self.get_gateway(gateway_name)
+        gateway: Optional[BaseGateway] = self.get_gateway(gateway_name)
         if gateway:
             gateway.cancel_order(req)
     
@@ -210,7 +211,7 @@ class MainEngine():
     def _process_trade_event(self, event: Event) -> None:
         trade: TradeData = event.data
         self.trades[trade.vt_tradeid] = trade
-        self.log(f"Trade {trade.vt_symbol} {trade.volume} {trade.direction.value} {trade.offset.value}", trade.gateway_name)
+        self.log(f"Trade {trade.datetime} {trade.vt_symbol} {trade.volume} {trade.direction.value} {trade.offset.value}", trade.gateway_name)
 
     def _process_position_event(self, event: Event) -> None:
         position: PositionData = event.data
@@ -354,9 +355,9 @@ class MainEngine():
 
 class BaseEngine(ABC):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine, engine_name: str) -> None:
-        self.main_engine = main_engine
-        self.event_engine = event_engine
-        self.engine_name = engine_name
+        self.main_engine: MainEngine = main_engine
+        self.event_engine: EventEngine = event_engine
+        self.engine_name: str = engine_name
 
     @abstractmethod
     def close(self) -> None:
@@ -417,7 +418,7 @@ class DataEngine(BaseEngine):
         return self.load_file_paths.get(gateway_name)
 
     def delete_load_file(self, gateway_name: str) -> None:
-        file_path = self.get_load_file_path(gateway_name)
+        file_path: Optional[pathlib.Path] = self.get_load_file_path(gateway_name)
         if file_path.exists():
             file_path.unlink()
 
@@ -428,7 +429,7 @@ class DataEngine(BaseEngine):
         return self.backup_file_paths.get(gateway_name)
 
     def delete_backup_file(self, gateway_name: str) -> None:
-        file_path = self.get_backup_file_path(gateway_name)
+        file_path: Optional[pathlib.Path] = self.get_backup_file_path(gateway_name)
         if file_path.exists():
             file_path.unlink()
 
@@ -439,12 +440,16 @@ class DataEngine(BaseEngine):
         return self.datas.get(gateway_name)
 
     def load_data(self, gateway_name: str) -> pandas.DataFrame:
-        file_path = self.get_backup_file_path(gateway_name)
+        file_path: Optional[pathlib.Path] = self.get_backup_file_path(gateway_name)
         if not file_path.exists():
-            file_path = self.get_load_file_path(gateway_name)
+            file_path: Optional[pathlib.Path] = self.get_load_file_path(gateway_name)
 
         data = pandas.read_csv(file_path)
         self.add_data(gateway_name, data)
+        
+        if file_path is not self.get_backup_file_path(gateway_name):
+            print("dddddddddddd")
+            self.backup_data(gateway_name)
 
         self.main_engine.log("Data loaded", gateway_name)
         return data
@@ -453,7 +458,7 @@ class DataEngine(BaseEngine):
         self.datas.pop(gateway_name, None)
 
     def backup_data(self, gateway_name: str) -> None:
-        data = self.get_data(gateway_name)
+        data: Optional[pandas.DataFrame] = self.get_data(gateway_name)
         file_path = self.get_backup_file_path(gateway_name)
         data.to_csv(file_path, index=False)
 
@@ -465,8 +470,8 @@ class LogEngine(BaseEngine):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
         super().__init__(main_engine, event_engine, "LogEngine")
 
-        self.logger = logging.getLogger("MainEngine")
-        self.formatter = logging.Formatter("%(asctime)s  %(levelname)s: %(message)s")
+        self.logger: logging.Logger = logging.getLogger("MainEngine")
+        self.formatter: logging.Formatter = logging.Formatter("%(asctime)s  %(levelname)s: %(message)s")
         self.logger.setLevel(logging.INFO)
         
         self._add_log_dir_path()
@@ -477,22 +482,22 @@ class LogEngine(BaseEngine):
         self._register_event()
     
     def _add_log_dir_path(self) -> None:
-        self.log_dir_path = pathlib.Path(FILE_SETTING.get("LOG_DIR_PATH"))
+        self.log_dir_path: pathlib.Path = pathlib.Path(FILE_SETTING.get("LOG_DIR_PATH"))
         if not self.log_dir_path.exists():
             self.log_dir_path.mkdir()
 
     def _add_file_handler(self) -> None:
-        file_name = f"{datetime.now().strftime('%Y%m%d')}.log"
-        file_path = self.log_dir_path.joinpath(file_name)
+        file_name: str = f"{datetime.now().strftime('%Y%m%d')}.log"
+        file_path: pathlib.Path = self.log_dir_path.joinpath(file_name)
 
-        file_handler = logging.FileHandler(file_path, mode="a", encoding="utf-8")
+        file_handler: logging.FileHandler = logging.FileHandler(file_path, mode="a", encoding="utf-8")
         file_handler.setLevel(logging.INFO)
         file_handler.setFormatter(self.formatter)
 
         self.logger.addHandler(file_handler)
 
     def _add_console_handler(self) -> None:
-        console_handler = logging.StreamHandler()
+        console_handler: logging.StreamHandler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(self.formatter)
 

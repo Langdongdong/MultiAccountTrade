@@ -1,7 +1,5 @@
 import asyncio, math
-from turtle import left
-from typing import List, Dict
-
+from typing import List
 from pandas import DataFrame
 from config import TWAP_SETTING
 
@@ -26,20 +24,15 @@ class TWAP():
 
     async def run(self) -> None:
         while self.traded_volume < self.request.volume:
-            self.send_order()
-            await asyncio.sleep(self.interval)
-            self.cancel_active_orders()
-            await asyncio.sleep(1)
-            self.update_traded_volume()
+            # self.send_order()
+            # await asyncio.sleep(self.interval)
+            # self.cancel_active_orders()
+            # await asyncio.sleep(1)
+            # self.update_traded_volume()
 
-            self.engine.log(f"{self.request.vt_symbol} {self.request.order_mode.value} left {self.request.volume - self.traded_volume} volume", self.gateway_name)
+            # self.engine.log(f"{self.request.vt_symbol} {self.request.order_mode.value} left {self.request.volume - self.traded_volume} volume", self.gateway_name)
 
-            self.backup(
-                self.engine,
-                self.gateway_name,
-                self.request,
-                self.request.volume - self.traded_volume
-                )
+            self.backup()
         
         self.engine.log(f"Complete TWAP {self.request.vt_symbol}", self.gateway_name)
             
@@ -77,7 +70,7 @@ class TWAP():
             (data["Op1"] == self.request.Op1) &
             (data["Op2"] == self.request.Op2)
         ].index.values[0]
-
+        
         if left_volume == 0:
             data.drop(index=idx, inplace=True)
         else:

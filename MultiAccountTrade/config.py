@@ -36,8 +36,8 @@ AM_SYMBOL = ["UR","JD","AP","SM","SF","LH"]
 FILE_SETTING = {
     "ORDER_DIR_PATH": "Z:/position/TRADE/",
     "POSITION_DIR_PATH": "Z:/HOLD/",
-    "BACKUP_DIR_PATH": "E:/Trade/MAEngine/Backup/",
-    "LOG_DIR_PATH": "E:/Trade/MAEngine/Log/"
+    "BACKUP_DIR_PATH": "Z:/Backup/",
+    "LOG_DIR_PATH": "Z:/Log/"
 }
 
 # Set the TWAP algo params.

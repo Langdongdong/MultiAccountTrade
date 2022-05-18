@@ -6,7 +6,9 @@ from cta_engine import CtaEngine
 
 class CtaTemplate(ABC):
     def __init__(self, cta_engine: CtaEngine) -> None:
-        pass
+        self.cta_engine = cta_engine
+
+    
     
     @abstractmethod
     def on_init(self) -> None:
