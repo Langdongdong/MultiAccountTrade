@@ -93,24 +93,22 @@ def load_data(engine: MainEngine) -> Tuple[Set[str], asyncio.Queue]:
             request = OrderAsking(getattr(row, "ContractID"), getattr(row, "Op1"), getattr(row, "Op2"), getattr(row, "Num"))
             if request.vt_symbol in subscribes:
                 queue.put_nowait((gateway_name, request))
-                
+
     return subscribes, queue
 
 
 def save_position(engine: MainEngine) -> None:
-    positions: pandas.DataFrame = engine.get_all_positions(True)
     position_dir_path = pathlib.Path(FILE_SETTING.get("POSITION_DIR_PATH"))
-
-    positions = positions[positions["volume"] != 0]
-    positions["direction"] = positions["direction"].apply(lambda x : "Buy" if x == Direction.LONG else "Sell")
-    positions.sort_values(["direction", "symbol"], ascending = [True, True], inplace = True)
 
     for gateway_name in engine.get_all_gateway_names():
         gateway_position: pandas.DataFrame = engine.get_gateway_positions(gateway_name, True)
+        gateway_position = gateway_position[gateway_position["volume"] is not 0]
         gateway_position = gateway_position[["symbol", "direction", "volume"]]
+        gateway_position["direction"] = gateway_position["direction"].apply(lambda x : "Buy" if x == Direction.LONG else "Sell")
+        gateway_position.sort_values(["direction", "symbol"], ascending = [True, True], inplace = True)
 
-        positon_file_path = position_dir_path.joinpath(f"{datetime.now().strftime('%Y%m%d')}_{gateway_name}_positions.csv")
-        gateway_position.to_csv(positon_file_path, index = False)
+        position_file_path = position_dir_path.joinpath(f"{datetime.now().strftime('%Y%m%d')}_{gateway_name}_positions.csv")
+        gateway_position.to_csv(position_file_path, index = False)
         
 
 if __name__ == "__main__":
