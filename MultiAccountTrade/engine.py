@@ -144,7 +144,6 @@ class MainEngine():
     def _process_trade_event(self, event: Event) -> None:
         trade: TradeData = event.data
         self.trades[trade.vt_tradeid] = trade
-        self.log(f"Trade {trade.vt_symbol} {trade.direction.value} {trade.offset.value} {trade.volume}", trade.gateway_name)
 
     def _process_position_event(self, event: Event) -> None:
         position: PositionData = event.data
