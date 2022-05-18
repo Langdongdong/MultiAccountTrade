@@ -6,7 +6,17 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Type
 
 from utility import get_df
-from config import ACCOUNT_SETTING, FILE_SETTING, GATEWAY_SETTING
+from config import (
+    ACCOUNT_SETTING,
+    FILE_SETTING,
+    GATEWAY_SETTING
+)
+from constant import (
+    DAY_START,
+    DAY_END,
+    NIGHT_START,
+    NIGHT_END
+)
 
 from vnpy.event import Event, EventEngine
 from vnpy.trader.gateway import BaseGateway
@@ -14,7 +24,7 @@ from vnpy.trader.constant import (
     Offset,
     Direction,
     OrderType,
-    Exchange,
+    Exchange
 )
 from vnpy.trader.event import (
     EVENT_LOG,
@@ -35,7 +45,7 @@ from vnpy.trader.object import (
     PositionData,
     OrderRequest,
     SubscribeRequest,
-    CancelRequest,
+    CancelRequest
 )
 
 """
@@ -68,6 +78,31 @@ class MainEngine():
         self._add_gateways()
 
         self.log("Engine inited")
+    
+    @staticmethod
+    def is_trade_period() -> bool:
+        current_time = datetime.now().time()
+        if (
+            DAY_START <= current_time <= DAY_END
+            or NIGHT_START <= current_time
+            or NIGHT_END >= current_time
+        ):
+            return True
+        return False
+
+    @staticmethod
+    def is_day_period() -> bool:
+        current_time = datetime.now().time()
+        if DAY_START <= current_time <= DAY_END:
+            return True
+        return False
+
+    @staticmethod
+    def is_night_period() -> bool:
+        current_time = datetime.now().time()
+        if (NIGHT_START <= current_time) or (NIGHT_END >= current_time):
+            return True
+        return False
 
     def _add_engine(self, engine_class: Any) -> "BaseEngine":
         engine: BaseEngine = engine_class(self, self.event_engine)
@@ -158,7 +193,7 @@ class MainEngine():
                 return vt_orderids
             elif position.volume - position.frozen < volume:
                 vt_orderids.append("")
-                self.log(f"{vt_symbol} {direction.value} {offset.value} {volume} get no enough position volume to close", gateway_name)
+                self.log(f"{vt_symbol} {direction.value} {offset.value} {volume} no enough position volume to close", gateway_name, logging.ERROR)
                 return vt_orderids
 
             if contract.exchange in [Exchange.SHFE, Exchange.INE]:
@@ -332,7 +367,8 @@ class MainEngine():
         if active_order:
             req = active_order.create_cancel_request()
             self._cancel_order(req, active_order.gateway_name)
-            self.log(f"Cancel {active_order.vt_orderid} {active_order.vt_symbol} {active_order.direction.value} {active_order.offset.value} {active_order.volume - active_order.traded}")
+            self.log(f"Cancel {active_order.vt_orderid} {active_order.vt_symbol} {active_order.direction.value} {active_order.offset.value} {active_order.volume - active_order.traded}", 
+            active_order.gateway_name)
 
     def log(self, msg: str, gateway_name: str = None, level: int = logging.INFO) -> None:
         log = LogData(gateway_name, msg, level)
@@ -410,7 +446,7 @@ class DataEngine(BaseEngine):
     def add_load_file_path(self, gateway_name: str, file_name: str) -> None:
         self.load_file_paths[gateway_name] = self.load_dir_path.joinpath(file_name)
 
-    def get_load_file_path(self, gateway_name: str) -> pathlib.Path:
+    def get_load_file_path(self, gateway_name: str) -> Optional[pathlib.Path]:
         return self.load_file_paths.get(gateway_name)
 
     def delete_load_file(self, gateway_name: str) -> None:
@@ -421,7 +457,7 @@ class DataEngine(BaseEngine):
     def add_backup_file_path(self, gateway_name: str, file_name: str) -> None:
         self.backup_file_paths[gateway_name] = self.backup_dir_path.joinpath(file_name)
     
-    def get_backup_file_path(self, gateway_name: str) -> pathlib.Path:
+    def get_backup_file_path(self, gateway_name: str) -> Optional[pathlib.Path]:
         return self.backup_file_paths.get(gateway_name)
 
     def delete_backup_file(self, gateway_name: str) -> None:
@@ -435,10 +471,15 @@ class DataEngine(BaseEngine):
     def get_data(self, gateway_name: str) -> Optional[pandas.DataFrame]:
         return self.datas.get(gateway_name)
 
-    def load_data(self, gateway_name: str) -> pandas.DataFrame:
+    def load_data(self, gateway_name: str) -> Optional[pandas.DataFrame]:
         file_path: Optional[pathlib.Path] = self.get_backup_file_path(gateway_name)
-        if not file_path.exists():
-            file_path: Optional[pathlib.Path] = self.get_load_file_path(gateway_name)
+        if file_path:
+            if not file_path.exists():
+                file_path: Optional[pathlib.Path] = self.get_load_file_path(gateway_name)
+                if file_path:
+                    if not file_path.exists():
+                        self.main_engine.log(f"Check and add file path", gateway_name, logging.WARNING)
+                        return None
 
         data = pandas.read_csv(file_path)
         self.add_data(gateway_name, data)

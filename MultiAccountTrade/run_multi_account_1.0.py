@@ -84,7 +84,8 @@ def load_data(engine: MainEngine) -> Tuple[Set[str], asyncio.Queue]:
         engine.add_backup_file_path(gateway_name, f"{file_date}_{gateway_name}_backup.csv")
 
         requests: pandas.DataFrame = engine.load_data(gateway_name)
-        if is_night_period():
+        
+        if engine.is_night_period():
             requests = requests[requests["ContractID"].apply(lambda x:(re.match("[^0-9]*", x, re.I).group().upper() not in AM_SYMBOL_SETTING))]
         
         for row in requests.itertuples():

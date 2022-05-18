@@ -4,32 +4,6 @@ from pandas import DataFrame
 from constant import *
 from vnpy.trader.object import BaseData
 
-
-def is_trade_period() -> bool:
-    cur_time = datetime.datetime.now().time()
-    if (
-        DAY_START <= cur_time <= DAY_END
-        or NIGHT_START <= cur_time
-        or NIGHT_END >= cur_time
-    ):
-        return True
-    return False
-
-
-def is_day_period() -> bool:
-    cur_time = datetime.datetime.now().time()
-    if DAY_START <= cur_time <= DAY_END:
-        return True
-    return False
-
-
-def is_night_period() -> bool:
-    cur_time = datetime.datetime.now().time()
-    if (NIGHT_START <= cur_time) or (NIGHT_END >= cur_time):
-        return True
-    return False
-
-
 def to_df(data_list: Sequence) -> Optional[DataFrame]:
     if not data_list:
         return None
