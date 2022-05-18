@@ -3,7 +3,7 @@ import asyncio, pathlib, pandas, sys, re
 from datetime import datetime
 from typing import Set, Tuple
 
-from config import ACCOUNT_SETTING, AM_SYMBOL, FILE_SETTING
+from config import ACCOUNT_SETTING, AM_SYMBOL_SETTING, FILE_SETTING
 from utility import is_trade_period
 from object import OrderAsking
 from engine import MainEngine
@@ -11,47 +11,48 @@ from twap import TWAP
 from utility import is_night_period
 
 from vnpy.trader.constant import Direction
-from vnpy_ctp import CtpGateway
-from vnpy_rohon import RohonGateway
+
 
 
 async def run():
-    print(">>>>> START SCRIPT >>>>>")
+    engine = MainEngine()
+
+    engine.log("Start script")
     # while True:
     #     if is_trade_period():
     #         current_time = datetime.now().time()
     #         if datetime.time(9,5) <= current_time or datetime.time(21,5) <= current_time:
-    #             print(">>>>> START TRADING >>>>>")
+    #             engine.log("Start trading")
     #             break
     #     await asyncio.sleep(5)
 
-    engine = MainEngine([CtpGateway, RohonGateway], ACCOUNT_SETTING)
+    # engine.connect()
 
     subscribes, queue = load_data(engine)
 
-    while True:
-        not_inited_gateway_names = [gateway_name for gateway_name in engine.get_all_gateway_names() if not engine.is_gateway_inited(gateway_name)]
-        if len(not_inited_gateway_names) == 0:
-            break
-        await asyncio.sleep(3)
+    # while True:
+    #     not_inited_gateway_names = [gateway_name for gateway_name in engine.get_all_gateway_names() if not engine.is_gateway_inited(gateway_name)]
+    #     if len(not_inited_gateway_names) == 0:
+    #         break
+    #     await asyncio.sleep(3)
 
-    engine.susbcribe(list(subscribes))
-    await asyncio.sleep(3)
+    # engine.susbcribe(list(subscribes))
+    # await asyncio.sleep(3)
 
-    tasks = []
-    for i in range(len(engine.gateways) * 10):
-        tasks.append(asyncio.create_task(run_twap(engine, queue)))
+    # tasks = []
+    # for i in range(len(engine.gateways) * 10):
+    #     tasks.append(asyncio.create_task(run_twap(engine, queue)))
 
-    await queue.join()
-    engine.log("Complete all TWAP")
+    # await queue.join()
+    # engine.log("Complete all TWAP")
 
-    await asyncio.gather(*tasks, return_exceptions=True)
+    # await asyncio.gather(*tasks, return_exceptions=True)
 
-    save_position(engine)
-    engine.log("Positions files saved")
+    # save_position(engine)
+    # engine.log("Positions files saved")
 
-    engine.close()
-    sys.exit()
+    # engine.close()
+    # sys.exit()
 
 
 async def run_twap(engine: MainEngine, queue: asyncio.Queue):
@@ -75,7 +76,7 @@ def load_data(engine: MainEngine) -> Tuple[Set[str], asyncio.Queue]:
         for last in iter: pass
         file_date = re.match("[0-9]*",last.name).group()
     except:
-        print("SFTP remote server has not be turned on.")
+        engine.log("SFTP remote server has not be turned on.")
         sys.exit(0)
 
     for gateway_name in engine.get_all_gateway_names():
@@ -83,13 +84,10 @@ def load_data(engine: MainEngine) -> Tuple[Set[str], asyncio.Queue]:
         engine.add_backup_file_path(gateway_name, f"{file_date}_{gateway_name}_backup.csv")
 
         requests: pandas.DataFrame = engine.load_data(gateway_name)
-
         if is_night_period():
-            requests = requests[requests["ContractID"].apply(lambda x:(re.match("[^0-9]*", x, re.I).group().upper() not in AM_SYMBOL))]
+            requests = requests[requests["ContractID"].apply(lambda x:(re.match("[^0-9]*", x, re.I).group().upper() not in AM_SYMBOL_SETTING))]
         
         for row in requests.itertuples():
-            if getattr(row, "Num") <= 0:
-                continue
             request = OrderAsking(getattr(row, "ContractID"), getattr(row, "Op1"), getattr(row, "Op2"), getattr(row, "Num"))
             queue.put_nowait((gateway_name, request))
 

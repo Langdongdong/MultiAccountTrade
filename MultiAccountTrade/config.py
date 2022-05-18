@@ -1,3 +1,6 @@
+from vnpy_ctp import CtpGateway
+from vnpy_rohon import RohonGateway
+
 # 180.168.146.187:10201
 # 180.168.146.187:10211
 # 180.168.146.187:10130
@@ -29,8 +32,10 @@ ACCOUNT_SETTING = {
     }
 }
 
+GATEWAY_SETTING = [CtpGateway, RohonGateway]
+
 # Symbols which only can be traded in day time.
-AM_SYMBOL = ["UR","JD","AP","SM","SF","LH"]
+AM_SYMBOL_SETTING = ["UR","JD","AP","SM","SF","LH"]
 
 # Set the file path params.
 FILE_SETTING = {

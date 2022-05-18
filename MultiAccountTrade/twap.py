@@ -24,13 +24,13 @@ class TWAP():
 
     async def run(self) -> None:
         while self.traded_volume < self.request.volume:
-            # self.send_order()
-            # await asyncio.sleep(self.interval)
-            # self.cancel_active_orders()
-            # await asyncio.sleep(1)
-            # self.update_traded_volume()
+            self.send_order()
+            await asyncio.sleep(self.interval)
+            self.cancel_active_orders()
+            await asyncio.sleep(1)
+            self.update_traded_volume()
 
-            # self.engine.log(f"{self.request.vt_symbol} {self.request.order_mode.value} left {self.request.volume - self.traded_volume} volume", self.gateway_name)
+            self.engine.log(f"{self.request.vt_symbol} {self.request.order_mode.value} left {self.request.volume - self.traded_volume} volume", self.gateway_name)
 
             self.backup()
         
@@ -60,7 +60,6 @@ class TWAP():
     def get_twap_volume(self) -> float:
         return max(float(math.floor(self.request.volume / (self.time / self.interval))), 1.0)
 
-
     def backup(self):
         data: DataFrame = self.engine.get_data(self.gateway_name)
         left_volume = self.request.volume - self.traded_volume
@@ -70,14 +69,13 @@ class TWAP():
             (data["Op1"] == self.request.Op1) &
             (data["Op2"] == self.request.Op2)
         ].index.values[0]
-        
+
         if left_volume == 0:
             data.drop(index=idx, inplace=True)
-        else:
+        else:  
             data.loc[idx, "Num"] = left_volume
 
         if data.empty:
             self.engine.delete_data(self.gateway_name)
-            self.engine.delete_backup_file(self.gateway_name)
         else:
             self.engine.backup_data(self.gateway_name)
