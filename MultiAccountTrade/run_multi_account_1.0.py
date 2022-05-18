@@ -17,7 +17,6 @@ from vnpy.trader.constant import Direction
 async def run():
     engine = MainEngine()
 
-    engine.log("Start script")
     # while True:
     #     if is_trade_period():
     #         current_time = datetime.now().time()
@@ -32,11 +31,11 @@ async def run():
 
     # while True:
     #     not_inited_gateway_names = [gateway_name for gateway_name in engine.get_all_gateway_names() if not engine.is_gateway_inited(gateway_name)]
-    #     if len(not_inited_gateway_names) == 0:
+    #     if not not_inited_gateway_names:
     #         break
     #     await asyncio.sleep(3)
 
-    # engine.susbcribe(list(subscribes))
+    # engine.susbcribe(subscribes)
     # await asyncio.sleep(3)
 
     # tasks = []
@@ -51,8 +50,8 @@ async def run():
     # save_position(engine)
     # engine.log("Positions files saved")
 
-    # engine.close()
-    # sys.exit()
+    engine.close()
+    sys.exit()
 
 
 async def run_twap(engine: MainEngine, queue: asyncio.Queue):
@@ -84,16 +83,17 @@ def load_data(engine: MainEngine) -> Tuple[Set[str], asyncio.Queue]:
         engine.add_backup_file_path(gateway_name, f"{file_date}_{gateway_name}_backup.csv")
 
         requests: pandas.DataFrame = engine.load_data(gateway_name)
-        
-        if engine.is_night_period():
-            requests = requests[requests["ContractID"].apply(lambda x:(re.match("[^0-9]*", x, re.I).group().upper() not in AM_SYMBOL_SETTING))]
+
+        subscribes.update([OrderAsking.convert_to_vt_symbol(symbol) for symbol in requests["ContractID"].tolist()])
+        if engine.is_night_trading_time():
+            subscribes = engine.filter_am_symbol(subscribes)
+            # requests = requests[requests["ContractID"].apply(lambda x:(re.match("[^0-9]*", x, re.I).group().upper() not in AM_SYMBOL_SETTING))]
         
         for row in requests.itertuples():
             request = OrderAsking(getattr(row, "ContractID"), getattr(row, "Op1"), getattr(row, "Op2"), getattr(row, "Num"))
-            queue.put_nowait((gateway_name, request))
-
-        subscribes.update([OrderAsking.convert_to_vt_symbol(symbol) for symbol in requests["ContractID"].tolist()])
-
+            if request.vt_symbol in subscribes:
+                queue.put_nowait((gateway_name, request))
+                
     return subscribes, queue
 
 
@@ -106,11 +106,11 @@ def save_position(engine: MainEngine) -> None:
     positions.sort_values(["direction", "symbol"], ascending = [True, True], inplace = True)
 
     for gateway_name in engine.get_all_gateway_names():
-        position: pandas.DataFrame = positions[positions["gateway_name"] == gateway_name]
-        position = position[["symbol", "direction", "volume"]]
+        gateway_position: pandas.DataFrame = engine.get_gateway_positions(gateway_name, True)
+        gateway_position = gateway_position[["symbol", "direction", "volume"]]
 
         positon_file_path = position_dir_path.joinpath(f"{datetime.now().strftime('%Y%m%d')}_{gateway_name}_positions.csv")
-        position.to_csv(positon_file_path, index = False)
+        gateway_position.to_csv(positon_file_path, index = False)
         
 
 if __name__ == "__main__":

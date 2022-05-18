@@ -35,7 +35,7 @@ ACCOUNT_SETTING = {
 GATEWAY_SETTING = [CtpGateway, RohonGateway]
 
 # Symbols which only can be traded in day time.
-AM_SYMBOL_SETTING = ["UR","JD","AP","SM","SF","LH"]
+AM_SYMBOL_SETTING = {"UR","JD","AP","SM","SF","LH"}
 
 # Set the file path params.
 FILE_SETTING = {

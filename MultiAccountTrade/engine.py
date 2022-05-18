@@ -3,10 +3,11 @@ import logging, pathlib, pandas
 from copy import copy
 from datetime import datetime
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Dict, List, Optional, Set, Type
 
 from utility import get_df
 from config import (
+    AM_SYMBOL_SETTING,
     ACCOUNT_SETTING,
     FILE_SETTING,
     GATEWAY_SETTING
@@ -80,7 +81,7 @@ class MainEngine():
         self.log("Engine inited")
     
     @staticmethod
-    def is_trade_period() -> bool:
+    def is_trading_time() -> bool:
         current_time = datetime.now().time()
         if (
             DAY_START <= current_time <= DAY_END
@@ -91,18 +92,26 @@ class MainEngine():
         return False
 
     @staticmethod
-    def is_day_period() -> bool:
+    def is_day_trading_time() -> bool:
         current_time = datetime.now().time()
         if DAY_START <= current_time <= DAY_END:
             return True
         return False
 
     @staticmethod
-    def is_night_period() -> bool:
+    def is_night_trading_time() -> bool:
         current_time = datetime.now().time()
         if (NIGHT_START <= current_time) or (NIGHT_END >= current_time):
             return True
         return False
+
+    @staticmethod
+    def filter_am_symbol(symbols: Set[str]) -> Set[str]:
+        return symbols - AM_SYMBOL_SETTING
+    
+    @staticmethod
+    def filer_pm_symbol(symbols: Set[str]) -> Set[str]:
+        return symbols & AM_SYMBOL_SETTING
 
     def _add_engine(self, engine_class: Any) -> "BaseEngine":
         engine: BaseEngine = engine_class(self, self.event_engine)
@@ -272,22 +281,22 @@ class MainEngine():
     def get_engine(self, engine_name: str) -> Optional["BaseEngine"]:
         return self.engines.get(engine_name)
 
-    def get_tick(self, vt_symbol: str, use_df: bool = False) -> Optional[TickData]:
+    def get_tick(self, vt_symbol: str, use_df: bool = False) -> Optional[TickData] | pandas.DataFrame:
         return get_df(self.ticks.get(vt_symbol), use_df)
 
-    def get_order(self, vt_orderid: str, use_df: bool = False) -> Optional[OrderData]:
+    def get_order(self, vt_orderid: str, use_df: bool = False) -> Optional[OrderData] | pandas.DataFrame:
         return get_df(self.orders.get(vt_orderid), use_df)
 
-    def get_active_order(self, vt_orderid: str, use_df: bool = False) -> Optional[OrderData]:
+    def get_active_order(self, vt_orderid: str, use_df: bool = False) -> Optional[OrderData] | pandas.DataFrame:
         return get_df(self.active_orders.get(vt_orderid), use_df)
 
-    def get_trade(self, vt_tradeid: str, use_df: bool = False) -> Optional[TradeData]:
+    def get_trade(self, vt_tradeid: str, use_df: bool = False) -> Optional[TradeData] | pandas.DataFrame:
         return get_df(self.trades.get(vt_tradeid), use_df)
 
-    def get_position(self, vt_positionid: str, use_df: bool = False) -> Optional[PositionData]:
+    def get_position(self, vt_positionid: str, use_df: bool = False) -> Optional[PositionData] | pandas.DataFrame:
         return get_df(self.positions.get(vt_positionid), use_df)
 
-    def get_contract(self, vt_symbol: str, use_df: bool = False) -> Optional[ContractData]:
+    def get_contract(self, vt_symbol: str, use_df: bool = False) -> Optional[ContractData] | pandas.DataFrame:
         return get_df(self.contracts.get(vt_symbol), use_df)
 
     def get_account(self, gateway_name: str) -> Optional[AccountData]:
@@ -305,26 +314,29 @@ class MainEngine():
     def get_all_gateway_class_names(self) -> List[str]:
         return list(self.gateway_classes.keys())
 
-    def get_all_ticks(self, use_df: bool = False) -> List[TickData]:
+    def get_all_ticks(self, use_df: bool = False) -> List[TickData] | pandas.DataFrame:
         return get_df(list(self.ticks.values()), use_df)
 
-    def get_all_orders(self, use_df: bool = False) -> List[OrderData]:
+    def get_all_orders(self, use_df: bool = False) -> List[OrderData] | pandas.DataFrame:
         return get_df(list(self.orders.values()), use_df)
 
-    def get_all_active_orders(self, use_df: bool = False) -> List[OrderData]:
+    def get_all_active_orders(self, use_df: bool = False) -> List[OrderData] | pandas.DataFrame:
         return get_df(list(self.active_orders.values()), use_df)
 
-    def get_all_trades(self, use_df: bool = False) -> List[TradeData]:
+    def get_all_trades(self, use_df: bool = False) -> List[TradeData] | pandas.DataFrame:
         return get_df(list(self.trades.values()), use_df)
 
-    def get_all_positions(self, use_df: bool = False) -> List[PositionData]:
+    def get_all_positions(self, use_df: bool = False) -> List[PositionData] | pandas.DataFrame:
         return get_df(list(self.positions.values()), use_df)
 
-    def get_all_contracts(self, use_df: bool = False) -> List[ContractData]:
+    def get_all_contracts(self, use_df: bool = False) -> List[ContractData] | pandas.DataFrame:
         return get_df(list(self.contracts.values()), use_df)
 
-    def get_all_accounts(self, use_df: bool = False) -> List[AccountData]:
+    def get_all_accounts(self, use_df: bool = False) -> List[AccountData] | pandas.DataFrame:
         return get_df(list(self.accounts.values()), use_df) 
+
+    def get_gateway_positions(self, gateway_name: str, use_df: bool = False) -> List[PositionData] | pandas.DataFrame:
+        return get_df([position for position in self.get_all_positions() if position.gateway_name == gateway_name], use_df)
 
     def is_gateway_inited(self, gateway_name: str) -> bool:
         gateway = self.get_gateway(gateway_name)
@@ -337,7 +349,7 @@ class MainEngine():
             self._connect(setting, gateway_name)
             self.log(f"Connect", gateway_name)
 
-    def susbcribe(self, vt_symbols: List[str]) -> None:
+    def susbcribe(self, vt_symbols: Set[str]) -> None:
         gateway_name = self.get_subscribe_gateway_name()
         if gateway_name:
             for vt_symbol in vt_symbols:
