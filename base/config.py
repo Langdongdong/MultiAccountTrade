@@ -39,7 +39,7 @@ AM_SYMBOL_SETTING = {"UR","JD","AP","SM","SF","LH"}
 
 # Set the file path params.
 FILE_SETTING = {
-    "ORDER_DIR_PATH": "Z:/position/TRADE/",
+    "LOAD_DIR_PATH": "Z:/position/TRADE/",
     "POSITION_DIR_PATH": "Z:/HOLD/",
     "BACKUP_DIR_PATH": "Z:/backup/",
     "LOG_DIR_PATH": "Z:/log/"

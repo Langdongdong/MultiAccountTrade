@@ -382,7 +382,7 @@ class MainEngine():
             self.log(f"Cancel {active_order.vt_orderid} {active_order.vt_symbol} {active_order.direction.value} {active_order.offset.value} {active_order.volume - active_order.traded}", 
             active_order.gateway_name)
 
-    def log(self, msg: str, gateway_name: str = None, level: int = logging.INFO) -> None:
+    def log(self, msg: str, gateway_name: str = "", level: int = logging.INFO) -> None:
         log = LogData(gateway_name, msg, level)
         event = Event(EVENT_LOG, log)
         self.event_engine.put(event)
@@ -421,11 +421,11 @@ class DataEngine(BaseEngine):
 
     def _add_load_dir_path(self) -> None:
         try:
-            self.load_dir_path = pathlib.Path(FILE_SETTING.get("ORDER_DIR_PATH"))
+            self.load_dir_path = pathlib.Path(FILE_SETTING.get("LOAD_DIR_PATH"))
             if not self.load_dir_path.exists():
                 self.load_dir_path.mkdir()
         except:
-            self.main_engine.log("SFTP remote server has not be turned on.")
+            self.main_engine.log("Order directory path cause error", level=logging.ERROR)
 
     def _add_backup_dir_path(self) -> None:
         try:
@@ -433,7 +433,7 @@ class DataEngine(BaseEngine):
             if not self.backup_dir_path.exists():
                 self.backup_dir_path.mkdir()
         except:
-            self.main_engine.log("SFTP remote server has not be turned on.")
+            self.main_engine.log("Backup directory path cause error", level=logging.ERROR)
 
     def get_load_dir_path(self) -> pathlib.Path:
         return self.load_dir_path
@@ -479,13 +479,13 @@ class DataEngine(BaseEngine):
             if not file_path.exists():
                 file_path: pathlib.Path = self.add_load_file_path(gateway_name, file_name)
         except:
-            self.main_engine.log("Check file path is correct or not. Or add load and backup file path first", level = logging.ERROR)
+            self.main_engine.log("Backup or load file path cause error", level = logging.ERROR)
             return None
         data = pandas.read_csv(file_path)
         self.add_data(gateway_name, data)
 
-        # if file_path is not self.get_backup_file_path(gateway_name):
-        #     self.backup_data(gateway_name)
+        if file_path is not self.get_backup_file_path(gateway_name):
+            self.backup_data(gateway_name)
 
         self.main_engine.log("Data loaded", gateway_name)
         return data
@@ -500,7 +500,7 @@ class DataEngine(BaseEngine):
             file_path = self.get_backup_file_path(gateway_name)
             data.to_csv(file_path, index=False)
         else:
-            self.main_engine.log(f"Add data first", gateway_name)
+            self.main_engine.log(f"Backup data is None", gateway_name, logging.ERROR)
 
     def close(self) -> None:
         return super().close()
@@ -527,7 +527,7 @@ class LogEngine(BaseEngine):
             if not self.log_dir_path.exists():
                 self.log_dir_path.mkdir()
         except:
-            self.main_engine.log("SFTP remote server has not be turned on.")
+            self.main_engine.log("Log directory path cause error.", level=logging.ERROR)
 
     def _add_file_handler(self) -> None:
         file_name: str = f"{datetime.now().strftime('%Y%m%d')}.log"
@@ -539,7 +539,7 @@ class LogEngine(BaseEngine):
             file_handler.setFormatter(self.formatter)
             self.logger.addHandler(file_handler)
         except:
-            self.main_engine.log("SFTP remote server has not be turned on.")
+            self.main_engine.log("Log file path cause error", level=logging.ERROR)
 
 
     def _add_console_handler(self) -> None:
@@ -551,10 +551,7 @@ class LogEngine(BaseEngine):
 
     def _process_log_event(self, event: Event) -> None:
         log: LogData = event.data
-        if log.gateway_name:
-            self.logger.log(log.level, f"{log.gateway_name} {log.msg}")
-        else:
-            self.logger.log(log.level, log.msg)
+        self.logger.log(log.level, f"{log.gateway_name} {log.msg}")
 
     def _register_event(self) -> None:
         self.event_engine.register(EVENT_LOG, self._process_log_event)
