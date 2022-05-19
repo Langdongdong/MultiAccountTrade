@@ -487,8 +487,11 @@ class DataEngine(BaseEngine):
             file_path: pathlib.Path = self.add_backup_file_path(gateway_name, f"{gateway_name}_backup.csv")
             if not file_path.exists():
                 file_path: pathlib.Path = self.add_load_file_path(gateway_name, file_name)
+                if not file_path.exists():
+                    self.main_engine.log("Load file path does not exist", gateway_name)
+                    return None
         except:
-            self.main_engine.log("Backup or load file path cause error", level = logging.ERROR)
+            self.main_engine.log("Backup or load file path cause error", gateway_name, logging.ERROR)
             return None
 
         data = pandas.read_csv(file_path)
@@ -508,9 +511,12 @@ class DataEngine(BaseEngine):
         data: Optional[pandas.DataFrame] = self.get_data(gateway_name)
         if data is not None:
             file_path = self.get_backup_file_path(gateway_name)
-            data.to_csv(file_path, index=False)
+            if file_path:
+                data.to_csv(file_path, index=False)
+            else:
+                self.main_engine.log(f"Backup file path is None", gateway_name)
         else:
-            self.main_engine.log(f"Backup data is None", gateway_name, logging.ERROR)
+            self.main_engine.log(f"Backup data is None", gateway_name)
 
     def close(self) -> None:
         return super().close()

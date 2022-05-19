@@ -17,19 +17,19 @@ async def run():
 
     subscribes, queue = load_data(engine)
 
-    engine.connect()
+    # engine.connect()
 
-    engine.susbcribe(subscribes)
+    # engine.susbcribe(subscribes)
 
-    tasks = []
-    for i in range(len(engine.gateways) * 10):
-        tasks.append(asyncio.create_task(run_algo(engine, queue)))
+    # tasks = []
+    # for i in range(len(engine.gateways) * 10):
+    #     tasks.append(asyncio.create_task(run_algo(engine, queue)))
 
-    await queue.join()
-    await asyncio.gather(*tasks, return_exceptions=True)
+    # await queue.join()
+    # await asyncio.gather(*tasks, return_exceptions=True)
 
-    save_position(engine)
-    engine.log("Position file saved")
+    # save_position(engine)
+    # engine.log("Position file saved")
 
     engine.close()
     sys.exit()
