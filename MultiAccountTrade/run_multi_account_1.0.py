@@ -67,10 +67,8 @@ def load_data(engine: MainEngine) -> Tuple[Set[str], asyncio.Queue]:
         sys.exit(0)
 
     for gateway_name in engine.get_all_gateway_names():
-        data_engine.add_load_file_path(gateway_name, f"{file_date}_{gateway_name}.csv")
-        data_engine.add_backup_file_path(gateway_name, f"{file_date}_{gateway_name}_backup.csv")
-
-        requests: pandas.DataFrame = data_engine.load_data(gateway_name)
+        # data_engine.add_load_file_path(gateway_name, f"{file_date}_{gateway_name}.csv")
+        requests: pandas.DataFrame = data_engine.load_data(gateway_name, f"{file_date}_{gateway_name}.csv")
 
         subscribes.update([OrderAsking.convert_to_vt_symbol(symbol) for symbol in requests["ContractID"].tolist()])
         if engine.is_night_trading_time():

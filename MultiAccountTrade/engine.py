@@ -435,8 +435,10 @@ class DataEngine(BaseEngine):
     def get_backup_dir_path(self) -> pathlib.Path:
         return self.backup_dir_path
     
-    def add_load_file_path(self, gateway_name: str, file_name: str) -> None:
-        self.load_file_paths[gateway_name] = self.load_dir_path.joinpath(file_name)
+    def add_load_file_path(self, gateway_name: str, file_name: str) -> pathlib.Path:
+        load_file_path: pathlib.Path = self.load_dir_path.joinpath(file_name)
+        self.load_file_paths[gateway_name] = load_file_path
+        return load_file_path
 
     def get_load_file_path(self, gateway_name: str) -> Optional[pathlib.Path]:
         return self.load_file_paths.get(gateway_name)
@@ -446,8 +448,10 @@ class DataEngine(BaseEngine):
         if file_path.exists():
             file_path.unlink()
 
-    def add_backup_file_path(self, gateway_name: str, file_name: str) -> None:
-        self.backup_file_paths[gateway_name] = self.backup_dir_path.joinpath(file_name)
+    def add_backup_file_path(self, gateway_name: str, file_name: str) -> pathlib.Path:
+        backup_file_path: pathlib.Path = self.backup_dir_path.joinpath(file_name)
+        self.backup_file_paths[gateway_name] = backup_file_path
+        return backup_file_path
     
     def get_backup_file_path(self, gateway_name: str) -> Optional[pathlib.Path]:
         return self.backup_file_paths.get(gateway_name)
@@ -463,11 +467,17 @@ class DataEngine(BaseEngine):
     def get_data(self, gateway_name: str) -> Optional[pandas.DataFrame]:
         return self.datas.get(gateway_name)
 
-    def load_data(self, gateway_name: str) -> Optional[pandas.DataFrame]:
+    def load_data(self, gateway_name: str, file_name: str) -> Optional[pandas.DataFrame]:
         try:
+            backup_file_path: pathlib.Path = self.add_backup_file_path(gateway_name, f"{gateway_name}_backup.csv")
+            if not backup_file_path.exists():
+                load_file_path: pathlib.Path = self.add_load_file_path(gateway_name, file_name)
+
+                
             file_path: Optional[pathlib.Path] = self.get_backup_file_path(gateway_name)
-            if not file_path.exists():
+            if file_path is None:
                 file_path: Optional[pathlib.Path] = self.get_load_file_path(gateway_name)
+                self.add_backup_file_path(gateway_name, f"{gateway_name}_backup.csv")
 
             data = pandas.read_csv(file_path)
             self.add_data(gateway_name, data)
