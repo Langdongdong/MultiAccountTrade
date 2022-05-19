@@ -15,7 +15,7 @@ class SniperAlgo():
         
         self.limit: int = SNIPER_SETTING.get("LIMIT", 5)
         self.hit: int = SNIPER_SETTING.get("HIT", 2)
-        self.interval: int = SNIPER_SETTING.get("INTERVAL", 3)
+        self.interval: int = SNIPER_SETTING.get("INTERVAL", 10)
 
         self.vt_orderids: List[str] = []
         self.traded_volume: float = 0
@@ -66,9 +66,9 @@ class SniperAlgo():
     def get_volume(self) -> float:
         tick = self.ma_engine.get_tick(self.order_asking.vt_symbol)
         if tick:
-            volume = min(float(math.ceil(tick.ask_volume_2 / self.hit)), self.order_asking.volume - self.traded_volume) \
+            volume = min(float(math.ceil(tick.ask_volume_1 / self.hit)), self.order_asking.volume - self.traded_volume) \
                 if self.order_asking.order_mode in [OrderMode.BUY, OrderMode.COVER] \
-                else min(float(math.ceil(tick.bid_volume_2 / self.hit)), self.order_asking.volume - self.traded_volume)
+                else min(float(math.ceil(tick.bid_volume_1 / self.hit)), self.order_asking.volume - self.traded_volume)
         else:
             volume = min(self.order_asking.volume - self.traded_volume, 1.0)
         return volume

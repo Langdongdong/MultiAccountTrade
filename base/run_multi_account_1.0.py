@@ -14,22 +14,22 @@ from vnpy.trader.constant import Direction
 
 async def run():
     engine = MainEngine()
-    engine.connect()
 
     subscribes, queue = load_data(engine)
 
-    # engine.susbcribe(subscribes)
-    # await asyncio.sleep(5)
+    engine.connect()
 
-    # tasks = []
-    # for i in range(len(engine.gateways) * 10):
-    #     tasks.append(asyncio.create_task(run_algo(engine, queue)))
+    engine.susbcribe(subscribes)
 
-    # await queue.join()
-    # await asyncio.gather(*tasks, return_exceptions=True)
+    tasks = []
+    for i in range(len(engine.gateways) * 10):
+        tasks.append(asyncio.create_task(run_algo(engine, queue)))
 
-    # save_position(engine)
-    # engine.log("Position file saved")
+    await queue.join()
+    await asyncio.gather(*tasks, return_exceptions=True)
+
+    save_position(engine)
+    engine.log("Position file saved")
 
     engine.close()
     sys.exit()

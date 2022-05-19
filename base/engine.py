@@ -1,4 +1,4 @@
-import logging, pathlib, pandas, re
+import logging, pathlib, pandas, time, re
 
 from copy import copy
 from datetime import datetime
@@ -347,8 +347,15 @@ class MainEngine():
     def connect(self) -> None:
         for gateway_name, setting in ACCOUNT_SETTING.items():
             self._connect(setting, gateway_name)
-            self.log(f"Connect", gateway_name)
+        
+        while True:
+            time.sleep(5)
+            not_inited_gateway_names = [gateway_name for gateway_name in self.get_all_gateway_names() if not self.is_gateway_inited(gateway_name)]
+            if not not_inited_gateway_names:
+                break
 
+        self.log("Connected")
+        
     def susbcribe(self, vt_symbols: Set[str]) -> None:
         gateway_name = self.get_subscribe_gateway_name()
         if gateway_name:
@@ -360,8 +367,10 @@ class MainEngine():
                         exchange = contract.exchange
                     )
                     self._subscribe(req, gateway_name)
-                    self.log(f"Subscribe {vt_symbol} market data", gateway_name)
 
+        time.sleep(3)
+        self.log(f"Subscribed") 
+        
     def buy(self, vt_symbol: str, volume: float, gateway_name: str) -> List[str]:
         return self._send_taker_order(vt_symbol, volume, Direction.LONG, Offset.OPEN, gateway_name)
     
@@ -379,7 +388,7 @@ class MainEngine():
         if active_order:
             req = active_order.create_cancel_request()
             self._cancel_order(req, active_order.gateway_name)
-            self.log(f"Cancel {active_order.vt_orderid} {active_order.vt_symbol} {active_order.direction.value} {active_order.offset.value} {active_order.volume - active_order.traded}", 
+            self.log(f"Cancel {active_order.vt_symbol} {active_order.direction.value} {active_order.offset.value} {active_order.volume - active_order.traded}", 
             active_order.gateway_name)
 
     def log(self, msg: str, gateway_name: str = "", level: int = logging.INFO) -> None:
