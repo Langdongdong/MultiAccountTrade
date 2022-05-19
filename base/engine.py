@@ -481,6 +481,7 @@ class DataEngine(BaseEngine):
         except:
             self.main_engine.log("Backup or load file path cause error", level = logging.ERROR)
             return None
+
         data = pandas.read_csv(file_path)
         self.add_data(gateway_name, data)
 
