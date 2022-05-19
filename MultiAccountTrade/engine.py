@@ -464,23 +464,22 @@ class DataEngine(BaseEngine):
         return self.datas.get(gateway_name)
 
     def load_data(self, gateway_name: str) -> Optional[pandas.DataFrame]:
-        file_path: Optional[pathlib.Path] = self.get_backup_file_path(gateway_name)
-        if file_path:
+        try:
+            file_path: Optional[pathlib.Path] = self.get_backup_file_path(gateway_name)
             if not file_path.exists():
                 file_path: Optional[pathlib.Path] = self.get_load_file_path(gateway_name)
-                if file_path:
-                    if not file_path.exists():
-                        self.main_engine.log(f"Check and add file path", gateway_name, logging.WARNING)
-                        return None
 
-        data = pandas.read_csv(file_path)
-        self.add_data(gateway_name, data)
-        
-        if file_path is not self.get_backup_file_path(gateway_name):
-            self.backup_data(gateway_name)
+            data = pandas.read_csv(file_path)
+            self.add_data(gateway_name, data)
+            
+            if file_path is not self.get_backup_file_path(gateway_name):
+                self.backup_data(gateway_name)
 
-        self.main_engine.log("Data loaded", gateway_name)
-        return data
+            self.main_engine.log("Data loaded", gateway_name)
+            return data
+        except:
+            self.main_engine.log("Check file path is correct or not. Or add load and backup file path first.", level = logging.ERROR)
+            return None
 
     def delete_data(self, gateway_name: str) -> None:
         self.datas.pop(gateway_name, None)

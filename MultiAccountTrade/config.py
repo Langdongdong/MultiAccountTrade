@@ -46,7 +46,8 @@ FILE_SETTING = {
 }
 
 # Set the TWAP algo params.
-TWAP_SETTING = {
-    "TIME": 60,
-    "INTERVAL": 30
+SNIPER_SETTING = {
+    "INTERVAL": 3,
+    "HIT": 2,
+    "LIMIT": 5
 }

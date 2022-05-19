@@ -3,10 +3,10 @@ import asyncio, pathlib, pandas, sys, re
 from datetime import datetime
 from typing import Set, Tuple
 
-from config import ACCOUNT_SETTING, AM_SYMBOL_SETTING, FILE_SETTING
+from config import FILE_SETTING
 from engine import MainEngine, DataEngine
 from object import OrderAsking
-from twap import TWAP
+from sniper_algo import SniperAlgo
 
 from vnpy.trader.constant import Direction
 
@@ -29,7 +29,7 @@ async def run():
 
     tasks = []
     for i in range(len(engine.gateways) * 10):
-        tasks.append(asyncio.create_task(run_twap(engine, queue)))
+        tasks.append(asyncio.create_task(run_algo(engine, queue)))
 
     await queue.join()
     await asyncio.gather(*tasks, return_exceptions=True)
@@ -40,11 +40,10 @@ async def run():
     engine.close()
     sys.exit()
 
-async def run_twap(engine: MainEngine, queue: asyncio.Queue):
+async def run_algo(engine: MainEngine, queue: asyncio.Queue):
     while not queue.empty():
         data = await queue.get()
-        twap = TWAP(engine, data[0], data[1])
-        await twap.run()
+        await SniperAlgo(engine, data[0], data[1]).run()
         queue.task_done()
 
 def load_data(engine: MainEngine) -> Tuple[Set[str], asyncio.Queue]:
