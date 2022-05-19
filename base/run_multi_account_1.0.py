@@ -18,12 +18,6 @@ async def run():
 
     subscribes, queue = load_data(engine)
 
-    # while True:
-    #     not_inited_gateway_names = [gateway_name for gateway_name in engine.get_all_gateway_names() if not engine.is_gateway_inited(gateway_name)]
-    #     if not not_inited_gateway_names:
-    #         break
-    #     await asyncio.sleep(3)
-
     # engine.susbcribe(subscribes)
     # await asyncio.sleep(5)
 
@@ -48,7 +42,8 @@ async def run_algo(engine: MainEngine, queue: asyncio.Queue):
 
 def load_data(engine: MainEngine) -> Tuple[Set[str], asyncio.Queue]:
     """
-    Load and process data from the specified csv file.\n
+    Load and process data from the specified csv file.
+    
     Output a set of symbol subscriptions and a queue of order requests.
     """   
     subscribes: Set[str] = set()
