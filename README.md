@@ -1,1 +1,1 @@
-# Spark - A multi account trading system
+# Spark - A Multi Account Trading Engine
