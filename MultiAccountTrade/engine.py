@@ -420,14 +420,20 @@ class DataEngine(BaseEngine):
         self._add_backup_dir_path()
 
     def _add_load_dir_path(self) -> None:
-        self.load_dir_path = pathlib.Path(FILE_SETTING.get("ORDER_DIR_PATH"))
-        if not self.load_dir_path.exists():
-            self.load_dir_path.mkdir()
+        try:
+            self.load_dir_path = pathlib.Path(FILE_SETTING.get("ORDER_DIR_PATH"))
+            if not self.load_dir_path.exists():
+                self.load_dir_path.mkdir()
+        except:
+            self.main_engine.log("SFTP remote server has not be turned on.")
 
     def _add_backup_dir_path(self) -> None:
-        self.backup_dir_path = pathlib.Path(FILE_SETTING.get("BACKUP_DIR_PATH"))
-        if not self.backup_dir_path.exists():
-            self.backup_dir_path.mkdir()
+        try:
+            self.backup_dir_path = pathlib.Path(FILE_SETTING.get("BACKUP_DIR_PATH"))
+            if not self.backup_dir_path.exists():
+                self.backup_dir_path.mkdir()
+        except:
+            self.main_engine.log("SFTP remote server has not be turned on.")
 
     def get_load_dir_path(self) -> pathlib.Path:
         return self.load_dir_path
@@ -469,35 +475,32 @@ class DataEngine(BaseEngine):
 
     def load_data(self, gateway_name: str, file_name: str) -> Optional[pandas.DataFrame]:
         try:
-            backup_file_path: pathlib.Path = self.add_backup_file_path(gateway_name, f"{gateway_name}_backup.csv")
-            if not backup_file_path.exists():
-                load_file_path: pathlib.Path = self.add_load_file_path(gateway_name, file_name)
-
-                
-            file_path: Optional[pathlib.Path] = self.get_backup_file_path(gateway_name)
-            if file_path is None:
-                file_path: Optional[pathlib.Path] = self.get_load_file_path(gateway_name)
-                self.add_backup_file_path(gateway_name, f"{gateway_name}_backup.csv")
-
-            data = pandas.read_csv(file_path)
-            self.add_data(gateway_name, data)
-            
-            if file_path is not self.get_backup_file_path(gateway_name):
-                self.backup_data(gateway_name)
-
-            self.main_engine.log("Data loaded", gateway_name)
-            return data
+            file_path: pathlib.Path = self.add_backup_file_path(gateway_name, f"{gateway_name}_backup.csv")
+            if not file_path.exists():
+                file_path: pathlib.Path = self.add_load_file_path(gateway_name, file_name)
         except:
-            self.main_engine.log("Check file path is correct or not. Or add load and backup file path first.", level = logging.ERROR)
+            self.main_engine.log("Check file path is correct or not. Or add load and backup file path first", level = logging.ERROR)
             return None
+        data = pandas.read_csv(file_path)
+        self.add_data(gateway_name, data)
+
+        # if file_path is not self.get_backup_file_path(gateway_name):
+        #     self.backup_data(gateway_name)
+
+        self.main_engine.log("Data loaded", gateway_name)
+        return data
+        
 
     def delete_data(self, gateway_name: str) -> None:
         self.datas.pop(gateway_name, None)
 
     def backup_data(self, gateway_name: str) -> None:
         data: Optional[pandas.DataFrame] = self.get_data(gateway_name)
-        file_path = self.get_backup_file_path(gateway_name)
-        data.to_csv(file_path, index=False)
+        if data is not None:
+            file_path = self.get_backup_file_path(gateway_name)
+            data.to_csv(file_path, index=False)
+        else:
+            self.main_engine.log(f"Add data first", gateway_name)
 
     def close(self) -> None:
         return super().close()
@@ -519,19 +522,25 @@ class LogEngine(BaseEngine):
         self._register_event()
     
     def _add_log_dir_path(self) -> None:
-        self.log_dir_path: pathlib.Path = pathlib.Path(FILE_SETTING.get("LOG_DIR_PATH"))
-        if not self.log_dir_path.exists():
-            self.log_dir_path.mkdir()
+        try:
+            self.log_dir_path: pathlib.Path = pathlib.Path(FILE_SETTING.get("LOG_DIR_PATH"))
+            if not self.log_dir_path.exists():
+                self.log_dir_path.mkdir()
+        except:
+            self.main_engine.log("SFTP remote server has not be turned on.")
 
     def _add_file_handler(self) -> None:
         file_name: str = f"{datetime.now().strftime('%Y%m%d')}.log"
         file_path: pathlib.Path = self.log_dir_path.joinpath(file_name)
 
-        file_handler: logging.FileHandler = logging.FileHandler(file_path, mode="a", encoding="utf-8")
-        file_handler.setLevel(logging.INFO)
-        file_handler.setFormatter(self.formatter)
+        try:
+            file_handler: logging.FileHandler = logging.FileHandler(file_path, mode="a", encoding="utf-8")
+            file_handler.setLevel(logging.INFO)
+            file_handler.setFormatter(self.formatter)
+            self.logger.addHandler(file_handler)
+        except:
+            self.main_engine.log("SFTP remote server has not be turned on.")
 
-        self.logger.addHandler(file_handler)
 
     def _add_console_handler(self) -> None:
         console_handler: logging.StreamHandler = logging.StreamHandler()

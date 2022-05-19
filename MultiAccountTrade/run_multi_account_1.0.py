@@ -18,24 +18,24 @@ async def run():
 
     subscribes, queue = load_data(engine)
 
-    while True:
-        not_inited_gateway_names = [gateway_name for gateway_name in engine.get_all_gateway_names() if not engine.is_gateway_inited(gateway_name)]
-        if not not_inited_gateway_names:
-            break
-        await asyncio.sleep(3)
+    # while True:
+    #     not_inited_gateway_names = [gateway_name for gateway_name in engine.get_all_gateway_names() if not engine.is_gateway_inited(gateway_name)]
+    #     if not not_inited_gateway_names:
+    #         break
+    #     await asyncio.sleep(3)
 
-    engine.susbcribe(subscribes)
-    await asyncio.sleep(5)
+    # engine.susbcribe(subscribes)
+    # await asyncio.sleep(5)
 
-    tasks = []
-    for i in range(len(engine.gateways) * 10):
-        tasks.append(asyncio.create_task(run_algo(engine, queue)))
+    # tasks = []
+    # for i in range(len(engine.gateways) * 10):
+    #     tasks.append(asyncio.create_task(run_algo(engine, queue)))
 
-    await queue.join()
-    await asyncio.gather(*tasks, return_exceptions=True)
+    # await queue.join()
+    # await asyncio.gather(*tasks, return_exceptions=True)
 
-    save_position(engine)
-    engine.log("Position file saved")
+    # save_position(engine)
+    # engine.log("Position file saved")
 
     engine.close()
     sys.exit()
@@ -67,7 +67,6 @@ def load_data(engine: MainEngine) -> Tuple[Set[str], asyncio.Queue]:
         sys.exit(0)
 
     for gateway_name in engine.get_all_gateway_names():
-        # data_engine.add_load_file_path(gateway_name, f"{file_date}_{gateway_name}.csv")
         requests: pandas.DataFrame = data_engine.load_data(gateway_name, f"{file_date}_{gateway_name}.csv")
 
         subscribes.update([OrderAsking.convert_to_vt_symbol(symbol) for symbol in requests["ContractID"].tolist()])
