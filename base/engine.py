@@ -476,10 +476,10 @@ class DataEngine(BaseEngine):
         if file_path.exists():
             file_path.unlink()
 
-    def add_cache_data(self, gateway_name: str, data: pandas.DataFrame) -> None:
+    def add_data(self, gateway_name: str, data: pandas.DataFrame) -> None:
         self.datas[gateway_name] = data
 
-    def get_cache_data(self, gateway_name: str) -> Optional[pandas.DataFrame]:
+    def get_data(self, gateway_name: str) -> Optional[pandas.DataFrame]:
         return self.datas.get(gateway_name)
 
     def load_data(self, gateway_name: str, file_name: str, cache: bool = False) -> Optional[pandas.DataFrame]:
@@ -504,7 +504,7 @@ class DataEngine(BaseEngine):
         return data
         
 
-    def delete_cache_data(self, gateway_name: str) -> None:
+    def delete_data(self, gateway_name: str) -> None:
         self.datas.pop(gateway_name, None)
 
     def backup_data(self, gateway_name: str) -> None:

@@ -17,20 +17,21 @@ async def run():
 
     subscribes, queue = load_data(engine)
 
-    # engine.connect()
+    engine.connect()
 
-    # engine.susbcribe(subscribes)
+    engine.susbcribe(subscribes)
 
-    # tasks = []
-    # for i in range(len(engine.gateways) * 10):
-    #     tasks.append(asyncio.create_task(run_algo(engine, queue)))
+    tasks = []
+    for i in range(len(engine.gateways) * 10):
+        tasks.append(asyncio.create_task(run_algo(engine, queue)))
 
-    # await queue.join()
-    # await asyncio.gather(*tasks, return_exceptions=True)
+    await queue.join()
+    await asyncio.gather(*tasks, return_exceptions=True)
 
-    # save_position(engine)
-    # engine.log("Position file saved")
+    save_position(engine)
+    engine.log("Position saved")
 
+    engine.log("Exit")
     engine.close()
     sys.exit()
 
@@ -59,7 +60,7 @@ def load_data(engine: MainEngine) -> Tuple[Set[str], asyncio.Queue]:
         file_date = re.match("[0-9]*",last.name).group()
     except:
         engine.log("SFTP remote server has not be turned on.")
-        sys.exit(0)
+        sys.exit()
 
     for gateway_name in engine.get_all_gateway_names():
         requests: pandas.DataFrame = data_engine.load_data(gateway_name, f"{file_date}_{gateway_name}.csv")

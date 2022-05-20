@@ -32,7 +32,6 @@ class SniperAlgo():
             self.ma_engine.log(f"Traded {self.order_asking.vt_symbol} {self.order_asking.order_mode.value} {self.traded_volume}", self.gateway_name)
             
             self.backup()
-        
             
     def send_order(self) -> List[str]:
         volume = self.get_volume()
@@ -87,12 +86,6 @@ class SniperAlgo():
             (data["Op2"] == self.order_asking.Op2)
         ].index.values[0]
 
-        if left_volume == 0:
-            data.drop(index=idx, inplace=True)
-        else:  
-            data.loc[idx, "Num"] = left_volume
-
-        if data.empty:
-            data_engine.delete_data(self.gateway_name)
+        data.loc[idx, "Num"] = left_volume
             
         data_engine.backup_data(self.gateway_name)
