@@ -30,9 +30,10 @@ async def run():
 
     save_position(engine)
     engine.log("Position saved")
-
-    engine.log("Exit")
+    
     engine.close()
+    
+    print("Exit")
     sys.exit()
 
 async def run_algo(engine: MainEngine, queue: asyncio.Queue):
