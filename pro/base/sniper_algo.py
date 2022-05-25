@@ -86,12 +86,6 @@ class SniperAlgo():
             (data["Op2"] == self.order_asking.Op2)
         ].index.values[0]
 
-        if left_volume <= 0:
-            data.drop(index=idx, inplace=True)
-        else:
-            data.loc[idx, "Num"] = left_volume
-        
-        if data.empty:
-            data_engine.delete_backup_file(self.gateway_name)
-        else:
-            data_engine.backup_data(self.gateway_name)
+        data.loc[idx, "Num"] = left_volume
+
+        data_engine.backup_data(self.gateway_name)

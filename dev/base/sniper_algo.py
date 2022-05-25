@@ -87,5 +87,5 @@ class SniperAlgo():
         ].index.values[0]
 
         data.loc[idx, "Num"] = left_volume
-            
+
         data_engine.backup_data(self.gateway_name)

@@ -484,7 +484,7 @@ class DataEngine(BaseEngine):
 
     def load_data(self, gateway_name: str, file_name: str, cache: bool = False) -> Optional[pandas.DataFrame]:
         try:
-            file_path: pathlib.Path = self.add_backup_file_path(gateway_name, f"{gateway_name}_backup.csv")
+            file_path: pathlib.Path = self.add_backup_file_path(gateway_name, f"{file_name}_backup.csv")
             if not file_path.exists():
                 file_path: pathlib.Path = self.add_load_file_path(gateway_name, file_name)
                 if not file_path.exists():
