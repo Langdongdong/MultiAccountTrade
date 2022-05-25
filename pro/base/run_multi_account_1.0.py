@@ -61,6 +61,7 @@ def load_data(engine: MainEngine) -> Tuple[Set[str], asyncio.Queue]:
         file_date = re.match("[0-9]*",last.name).group()
     except:
         engine.log("SFTP remote server has not be turned on.")
+        engine.close()
         sys.exit()
 
     for gateway_name in engine.get_all_gateway_names():
