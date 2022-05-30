@@ -1,4 +1,5 @@
 import asyncio, pathlib, pandas, sys, re
+from time import sleep
 
 from datetime import datetime
 from typing import Set, Tuple
@@ -14,6 +15,11 @@ from vnpy.trader.constant import Direction
 
 async def run():
     engine = MainEngine()
+
+    while True:
+        if engine.is_trading_time():
+            break
+        sleep(10)
 
     subscribes, queue = load_data(engine)
 
@@ -61,6 +67,7 @@ def load_data(engine: MainEngine) -> Tuple[Set[str], asyncio.Queue]:
         file_date = re.match("[0-9]*",last.name).group()
     except:
         engine.log("SFTP remote server has not be turned on.")
+        engine.close()
         sys.exit()
 
     for gateway_name in engine.get_all_gateway_names():
