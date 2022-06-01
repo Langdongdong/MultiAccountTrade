@@ -185,7 +185,7 @@ class MainEngine():
             symbol = contract.symbol,
             exchange = contract.exchange,
             price = price,
-            volume = volume,
+            volume = float(volume),
             direction = direction,
             offset = offset,
             type = OrderType.LIMIT
