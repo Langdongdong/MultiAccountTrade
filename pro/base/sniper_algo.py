@@ -65,9 +65,9 @@ class SniperAlgo():
     def get_volume(self) -> float:
         tick = self.ma_engine.get_tick(self.order_asking.vt_symbol)
         if tick:
-            volume = min(float(math.ceil(tick.ask_volume_1 / self.hit)), self.order_asking.volume - self.traded_volume) \
+            volume = min(math.ceil(tick.ask_volume_1 / self.hit), self.order_asking.volume - self.traded_volume) \
                 if self.order_asking.order_mode in [OrderMode.BUY, OrderMode.COVER] \
-                else min(float(math.ceil(tick.bid_volume_1 / self.hit)), self.order_asking.volume - self.traded_volume)
+                else min(math.ceil(tick.bid_volume_1 / self.hit), self.order_asking.volume - self.traded_volume)
         else:
             volume = min(self.order_asking.volume - self.traded_volume, 1.0)
         return volume
