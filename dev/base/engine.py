@@ -38,6 +38,7 @@ from vnpy.trader.event import (
 )
 from vnpy.trader.object import (
     LogData,
+    BarData,
     TickData,
     TradeData,
     OrderData,
@@ -577,3 +578,10 @@ class LogEngine(BaseEngine):
     def close(self) -> None:
         return super().close()
 
+class BarEngine(BaseEngine):
+    def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
+        super().__init__(main_engine, event_engine)
+
+    def update_bar(self, vt_symbol: str, period: int = 1) -> Optional[BarData]:
+        tick: TickData = self.main_engine.get_tick(vt_symbol)
+        
