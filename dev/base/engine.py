@@ -405,6 +405,8 @@ class MainEngine():
         for gateway in self.gateways.values():
             gateway.close()
 
+        self.log("Engine closed")
+
 
 class BaseEngine(ABC):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
@@ -489,10 +491,10 @@ class DataEngine(BaseEngine):
                 file_path: pathlib.Path = self.add_load_file_path(gateway_name, file_name)
                 if not file_path.exists():
                     self.main_engine.log("Load file path does not exist", gateway_name)
-                    return None
+                    return
         except:
             self.main_engine.log("Backup or load file path cause error", gateway_name, logging.ERROR)
-            return None
+            return
 
         data = pandas.read_csv(file_path)
         self.add_data(gateway_name, data)
@@ -574,3 +576,4 @@ class LogEngine(BaseEngine):
 
     def close(self) -> None:
         return super().close()
+

@@ -39,7 +39,6 @@ async def run():
     
     engine.close()
     
-    print("Exit")
     sys.exit()
 
 async def run_algo(engine: MainEngine, queue: asyncio.Queue):

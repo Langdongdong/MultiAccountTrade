@@ -17,3 +17,4 @@ class OrderMode(Enum):
 class BacktestingMode(Enum):
     BAR = "bar"
     TICK = "tick"
+    
