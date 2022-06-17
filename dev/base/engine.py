@@ -1,3 +1,4 @@
+from doctest import ELLIPSIS
 import logging, pathlib, pandas, time, re
 
 from copy import copy
@@ -25,7 +26,8 @@ from vnpy.trader.constant import (
     Offset,
     Direction,
     OrderType,
-    Exchange
+    Exchange,
+    Interval
 )
 from vnpy.trader.event import (
     EVENT_LOG,
@@ -581,7 +583,47 @@ class LogEngine(BaseEngine):
 class BarEngine(BaseEngine):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
         super().__init__(main_engine, event_engine)
-
-    def update_bar(self, vt_symbol: str, period: int = 1) -> Optional[BarData]:
-        tick: TickData = self.main_engine.get_tick(vt_symbol)
         
+        self.bars: Dict[str, BarData] = {}
+        self.last_ticks: Dict[str, TickData] = {}
+        self.period_counts: Dict[str, int] = {}
+
+    def update_bar(self, vt_symbol: str, period: int = 1, interval:Interval = Interval.MINUTE) -> Optional[BarData]:
+        last_tick: TickData = self.last_ticks.get(vt_symbol)
+        tick: TickData = self.main_engine.get_tick(vt_symbol)
+        bar: BarData = self.bars.get(vt_symbol)
+        
+        if not bar:
+            bar = BarData(
+                gateway_name = tick.gateway_name,
+                symbol = tick.symbol,
+                exchange = tick.exchange,
+                datetime = tick.datetime.replace(second=0,microsecond=0),
+                interval = interval,
+                open_interest = tick.open_interest,
+                open_price = tick.last_price,
+                high_price = tick.last_price,
+                low_price = tick.last_price,
+                close_price = tick.low_price
+            )
+            self.bars[vt_symbol] = bar
+        else:
+            period_count: int = self.period_counts[vt_symbol]
+            if not period % period_count:
+                pass
+            else:
+                bar.close_price = tick.last_price
+                bar.open_interest = tick.open_interest
+
+                bar.high_price = max(tick.high_price, bar.high_price)
+                bar.low_price = min(tick.low_price, bar.low_price)
+
+                bar.volume += max(tick.volume - last_tick.volume, 0)
+                bar.turnover += max(tick.turnover - last_tick.turnover, 0)
+
+                self.bars[vt_symbol] = bar
+                self.last_ticks[vt_symbol] = tick
+
+                if bar.datetime.min != tick.datetime.min:
+                    period_count += 1
+                    self.period_counts[vt_symbol] = period_count
