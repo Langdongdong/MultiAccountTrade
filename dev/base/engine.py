@@ -1,7 +1,7 @@
 from doctest import ELLIPSIS
 import logging, pathlib, pandas, time, re
 
-from copy import copy
+from copy import copy, deepcopy
 from datetime import datetime
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Set, Type
@@ -588,42 +588,49 @@ class BarEngine(BaseEngine):
         self.last_ticks: Dict[str, TickData] = {}
         self.period_counts: Dict[str, int] = {}
 
-    def update_bar(self, vt_symbol: str, period: int = 1, interval:Interval = Interval.MINUTE) -> Optional[BarData]:
-        last_tick: TickData = self.last_ticks.get(vt_symbol)
-        tick: TickData = self.main_engine.get_tick(vt_symbol)
+    def generate_minute_bar(self, vt_symbol: str, period: int = 1) -> Optional[BarData]:
+        complete_bar: BarData = None
         bar: BarData = self.bars.get(vt_symbol)
+
+        tick: TickData = self.main_engine.get_tick(vt_symbol)
+        last_tick: TickData = self.last_ticks.get(vt_symbol)
+
+        period_count: int = self.period_counts.get(vt_symbol, 0)
         
-        if not bar:
-            bar = BarData(
+        if not period_count or not period % period_count:
+            complete_bar = deepcopy(bar)
+
+            self.bars[vt_symbol] = BarData(
                 gateway_name = tick.gateway_name,
                 symbol = tick.symbol,
                 exchange = tick.exchange,
-                datetime = tick.datetime.replace(second=0,microsecond=0),
-                interval = interval,
+                datetime = tick.datetime,
+                interval = Interval.MINUTE,
                 open_interest = tick.open_interest,
                 open_price = tick.last_price,
                 high_price = tick.last_price,
                 low_price = tick.last_price,
                 close_price = tick.low_price
             )
-            self.bars[vt_symbol] = bar
+
         else:
-            period_count: int = self.period_counts[vt_symbol]
-            if not period % period_count:
-                pass
-            else:
-                bar.close_price = tick.last_price
-                bar.open_interest = tick.open_interest
+            bar.datetime = tick.datetime
+            bar.close_price = tick.last_price
+            bar.open_interest = tick.open_interest
 
-                bar.high_price = max(tick.high_price, bar.high_price)
-                bar.low_price = min(tick.low_price, bar.low_price)
+            bar.high_price = max(tick.high_price, bar.high_price)
+            bar.low_price = min(tick.low_price, bar.low_price)
 
-                bar.volume += max(tick.volume - last_tick.volume, 0)
-                bar.turnover += max(tick.turnover - last_tick.turnover, 0)
+            bar.volume += max(tick.volume - last_tick.volume, 0)
+            bar.turnover += max(tick.turnover - last_tick.turnover, 0)
 
-                self.bars[vt_symbol] = bar
-                self.last_ticks[vt_symbol] = tick
+            if bar.datetime.min != last_tick.datetime.min:
+                period_count += 1
+                self.period_counts[vt_symbol] = period_count
 
-                if bar.datetime.min != tick.datetime.min:
-                    period_count += 1
-                    self.period_counts[vt_symbol] = period_count
+        self.last_ticks[vt_symbol] = tick
+
+        if complete_bar:
+            self.period_counts[vt_symbol] = 0
+            complete_bar.datetime.replace(second=0, microsecond=0)
+            return complete_bar
