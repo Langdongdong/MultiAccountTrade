@@ -45,7 +45,7 @@ FILE_SETTING = {
     "LOG_DIR_PATH": "Z:/log/"
 }
 
-# Set the TWAP algo params.
+# Set the Sniper algo params.
 SNIPER_SETTING = {
     "INTERVAL": 10,
     "HIT": 5,

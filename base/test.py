@@ -1,6 +1,4 @@
-from time import sleep
-from engine import MainEngine
-from utility import BarGenerator
+from engine import MainEngine, BarEngine
 from vnpy.trader.object import BarData
 
 def on_bar(bar: BarData):
@@ -8,13 +6,9 @@ def on_bar(bar: BarData):
 
 if __name__ == "__main__":
     engine = MainEngine()
+    bar_engine: BarEngine = engine.add_engine(BarEngine)
+    bar_engine.init(5, on_bar)
 
     engine.connect()
 
     engine.susbcribe({"rb2210.SHFE"})
-
-    bg = BarGenerator(engine.event_engine, 5, on_bar)
-
-
-    
-    # engine.close()

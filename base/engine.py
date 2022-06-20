@@ -3,7 +3,7 @@ import logging, pathlib, pandas, time, re
 from copy import copy
 from datetime import datetime
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Set, Type
+from typing import Any, Callable, Dict, List, Optional, Set, Type
 
 from utility import get_df
 from config import (
@@ -26,6 +26,7 @@ from vnpy.trader.constant import (
     Direction,
     OrderType,
     Exchange,
+    Interval,
 )
 from vnpy.trader.event import (
     EVENT_LOG,
@@ -72,7 +73,7 @@ class MainEngine():
         self.event_engine.start()
 
         self.engines: Dict[str, BaseEngine] = {}
-        self.add_engine(LogEngine)
+        # self.add_engine(LogEngine)
 
         self.gateways: Dict[str, BaseGateway] = {}
         self.gateway_classes: Dict[str, Type[BaseGateway]] = {}
@@ -570,6 +571,72 @@ class LogEngine(BaseEngine):
 
     def _register_event(self) -> None:
         self.event_engine.register(EVENT_LOG, self._process_log_event)
+
+    def close(self) -> None:
+        return super().close()
+
+class BarEngine(BaseEngine):
+    def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
+        super().__init__(main_engine, event_engine)
+
+        self.bars: Dict[str, BarData] = {}
+        self.last_ticks: Dict[str, TickData] = {}
+        self.period_counts: Dict[str, int] = {}
+
+    def init(self, period: int, on_bar: Callable) -> None:
+        self.period: int = period
+        self.on_bar: Callable = on_bar
+
+        self.event_engine.register(EVENT_TICK, self._process_tick_event)
+
+    def _process_tick_event(self, event: Event):
+        tick: TickData = event.data
+        self.update_minute_bar(tick)
+
+    def update_minute_bar(self, tick: TickData) -> None:
+        bar: BarData = self.bars.get(tick.vt_symbol)
+        last_tick: TickData = self.last_ticks.get(tick.vt_symbol)
+        period_count: int = self.period_counts.get(tick.vt_symbol, 0)
+        
+        if not bar:
+            self.bars[tick.vt_symbol] = BarData(
+                gateway_name = tick.gateway_name,
+                symbol = tick.symbol,
+                exchange = tick.exchange,
+                datetime = tick.datetime,
+                interval = Interval.MINUTE,
+                open_interest = tick.open_interest,
+                open_price = tick.last_price,
+                high_price = tick.last_price,
+                low_price = tick.last_price,
+                close_price = tick.low_price
+            )
+
+        else:
+            bar.datetime = tick.datetime
+            bar.close_price = tick.last_price
+            bar.open_interest = tick.open_interest
+
+            bar.high_price = max(tick.high_price, bar.high_price)
+            bar.low_price = min(tick.low_price, bar.low_price)
+
+            if last_tick:
+                bar.volume += max(tick.volume - last_tick.volume, 0)
+                bar.turnover += max(tick.turnover - last_tick.turnover, 0)
+
+            if bar.datetime.minute != last_tick.datetime.minute:
+                period_count += 1
+                
+                if self.period == period_count:
+                    bar.datetime.replace(second=0, microsecond=0)
+                    self.on_bar(bar)
+
+                    self.bars.pop(tick.vt_symbol)
+                    period_count = 0
+
+                self.period_counts[tick.vt_symbol] = period_count
+
+        self.last_ticks[tick.vt_symbol] = tick
 
     def close(self) -> None:
         return super().close()
