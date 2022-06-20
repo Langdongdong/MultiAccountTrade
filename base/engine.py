@@ -1,8 +1,6 @@
-from doctest import ELLIPSIS
 import logging, pathlib, pandas, time, re
-from matplotlib.axis import Tick
 
-from copy import copy, deepcopy
+from copy import copy
 from datetime import datetime
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Set, Type
@@ -28,7 +26,6 @@ from vnpy.trader.constant import (
     Direction,
     OrderType,
     Exchange,
-    Interval
 )
 from vnpy.trader.event import (
     EVENT_LOG,
@@ -75,6 +72,7 @@ class MainEngine():
         self.event_engine.start()
 
         self.engines: Dict[str, BaseEngine] = {}
+        self.add_engine(LogEngine)
 
         self.gateways: Dict[str, BaseGateway] = {}
         self.gateway_classes: Dict[str, Type[BaseGateway]] = {}
