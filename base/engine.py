@@ -74,7 +74,6 @@ class MainEngine():
         self.event_engine.start()
 
         self.engines: Dict[str, BaseEngine] = {}
-        self._add_engines()
 
         self.gateways: Dict[str, BaseGateway] = {}
         self.gateway_classes: Dict[str, Type[BaseGateway]] = {}
@@ -116,14 +115,10 @@ class MainEngine():
     def filer_pm_symbol(vt_symbols: Set[str]) -> Set[str]:
         return {vt_symbol for vt_symbol in vt_symbols if re.match("[^0-9]*", vt_symbol, re.I).group().upper() in AM_SYMBOL_SETTING}
 
-    def _add_engine(self, engine_class: Any) -> "BaseEngine":
+    def add_engine(self, engine_class: Any) -> "BaseEngine":
         engine: BaseEngine = engine_class(self, self.event_engine)
         self.engines[engine_class.__name__] = engine
         return engine
-
-    def _add_engines(self) -> None:
-        self._add_engine(DataEngine)
-        self._add_engine(LogEngine)
 
     def _add_gateway(self, gateway_class_name: str, gateway_name: str) -> None:
         gateway_class: Optional[Type[BaseGateway]] = self.get_gateway_class(gateway_class_name)
@@ -588,6 +583,13 @@ class BarEngine(BaseEngine):
         self.last_ticks: Dict[str, TickData] = {}
         self.period_counts: Dict[str, int] = {}
 
+    def _register_tick_evnet(self) -> None:
+        self.event_engine.register(EVENT_TICK, self._process_tick_event)
+
+
+    def _process_tick_event(self, event: Event) -> None:
+        tick: TickData = event.data
+
     def generate_minute_bar(self, vt_symbol: str, period: int = 1) -> Optional[BarData]:
         complete_bar: BarData = None
         bar: BarData = self.bars.get(vt_symbol)
@@ -634,3 +636,6 @@ class BarEngine(BaseEngine):
             self.period_counts[vt_symbol] = 0
             complete_bar.datetime.replace(second=0, microsecond=0)
             return complete_bar
+
+    def close(self) -> None:
+        return super().close()
