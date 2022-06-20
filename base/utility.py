@@ -1,5 +1,5 @@
-from typing import Any, Optional, Sequence
-
+from typing import Any, Callable, Dict, Optional, Sequence
+from copy import deepcopy
 from pandas import DataFrame
 from vnpy.trader.constant import Interval
 from vnpy.trader.object import BaseData, TickData, BarData
@@ -22,48 +22,53 @@ def get_df(data: Any, use_df: bool = False) -> Optional[BaseData]:
 
 class BarGenerator:
     """
-    Generate minute bar.
+    Generate n minute bars.
     """
-    def __init__(self, period: int = 1) -> None:
+    def __init__(self, period: int = 1, on_bar: Callable = None) -> None:
         self.period: int = period
-        self.period_count: int = 0
+        self.on_bar: Callable = on_bar
 
-        self.last_bar: BarData = None
-        self.last_tick: TickData = None
+        self.bars: Dict[str, BarData] = {}
+        self.last_ticks: Dict[str, TickData] = {}
+        self.period_counts: Dict[str, int] = {}
 
-    def get_bar(self, tick: TickData) -> Optional[BarData]:
-        if not self.last_tick:
-            return
+    def update_minute_bar(self, tick: TickData) -> None:
+        bar: BarData = self.bars.get(tick.vt_symbol)
+        last_tick: TickData = self.last_ticks.get(tick.vt_symbol)
+        period_count: int = self.period_counts.get(tick.vt_symbol, 0)
         
-        if self.last_tick and tick.datetime < self.last_tick.datetime:
-            return
-        
-        if (not self.last_bar) or (not self.period_count % self.period):
-            
-            self.last_bar = BarData(
+        if not period_count or not self.period % period_count:
+            if bar:
+                bar.datetime.replace(second=0, microsecond=0)
+                self.on_bar(bar)
+                self.period_counts[tick.vt_symbol] = 0
+
+            self.bars[tick.vt_symbol] = BarData(
+                gateway_name = tick.gateway_name,
                 symbol = tick.symbol,
                 exchange = tick.exchange,
-                interval = Interval.MINUTE,
                 datetime = tick.datetime,
-                gateway_name = tick.gateway_name,
+                interval = Interval.MINUTE,
+                open_interest = tick.open_interest,
                 open_price = tick.last_price,
                 high_price = tick.last_price,
                 low_price = tick.last_price,
-                close_price = tick.last_price,
-                open_interest = tick.open_interest
+                close_price = tick.low_price
             )
-            self.last_bar.datetime.replace(second=0, microsecond=0)
 
         else:
-            
-            self.last_bar.datetime = tick.datetime
-            self.last_bar.close_price = tick.last_price
-            self.last_bar.open_interest = tick.open_interest
-            
-            self.last_bar.high_price = max(tick.high_price, tick.last_price, self.last_bar.high_price)
-            self.last_bar.low_price = min(tick.low_price, tick.last_price, self.last_bar.low_price)
+            bar.datetime = tick.datetime
+            bar.close_price = tick.last_price
+            bar.open_interest = tick.open_interest
 
-            self.last_bar.volume += max(tick.volume - self.last_tick.volume, 0)
-            self.last_bar.turnover += max(tick.turnover - self.last_tick.turnover, 0)
+            bar.high_price = max(tick.high_price, bar.high_price)
+            bar.low_price = min(tick.low_price, bar.low_price)
 
-        self.last_tick = tick
+            bar.volume += max(tick.volume - last_tick.volume, 0)
+            bar.turnover += max(tick.turnover - last_tick.turnover, 0)
+
+            if bar.datetime.min != last_tick.datetime.min:
+                period_count += 1
+                self.period_counts[tick.vt_symbol] = period_count
+
+        self.last_ticks[tick.vt_symbol] = tick
