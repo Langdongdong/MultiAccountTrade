@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional, Set, Type
 
 from utility import get_df
+from object import MongodbBar
 from config import (
     AM_SYMBOL_SETTING,
     ACCOUNT_SETTING,
@@ -39,7 +40,6 @@ from vnpy.trader.event import (
 )
 from vnpy.trader.object import (
     LogData,
-    BarData,
     TickData,
     TradeData,
     OrderData,
@@ -579,7 +579,7 @@ class BarEngine(BaseEngine):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
         super().__init__(main_engine, event_engine)
 
-        self.bars: Dict[str, BarData] = {}
+        self.bars: Dict[str, MongodbBar] = {}
         self.last_ticks: Dict[str, TickData] = {}
         self.period_counts: Dict[str, int] = {}
 
@@ -594,41 +594,42 @@ class BarEngine(BaseEngine):
         self.update_minute_bar(tick)
 
     def update_minute_bar(self, tick: TickData) -> None:
-        bar: BarData = self.bars.get(tick.vt_symbol)
+        bar: MongodbBar = self.bars.get(tick.vt_symbol)
         last_tick: TickData = self.last_ticks.get(tick.vt_symbol)
         period_count: int = self.period_counts.get(tick.vt_symbol, 0)
         
         if not bar:
-            self.bars[tick.vt_symbol] = BarData(
-                gateway_name = tick.gateway_name,
+            self.bars[tick.vt_symbol] = MongodbBar(
                 symbol = tick.symbol,
-                exchange = tick.exchange,
-                datetime = tick.datetime,
-                interval = Interval.MINUTE,
+                open = tick.last_price,
+                close = tick.last_price,
+                high = tick.last_price,
+                low = tick.last_price,
+                avg = None,
+                high_limit = tick.limit_up,
+                low_limit = tick.limit_down,
+                pre_close = tick.pre_close,
                 open_interest = tick.open_interest,
-                open_price = tick.last_price,
-                high_price = tick.last_price,
-                low_price = tick.last_price,
-                close_price = tick.low_price
+                date = tick.datetime
             )
 
         else:
-            bar.datetime = tick.datetime
-            bar.close_price = tick.last_price
+            bar.date = tick.datetime
+            bar.close = tick.last_price
             bar.open_interest = tick.open_interest
 
-            bar.high_price = max(tick.high_price, bar.high_price)
-            bar.low_price = min(tick.low_price, bar.low_price)
+            bar.high = max(tick.high_price, bar.high)
+            bar.low = min(tick.low_price, bar.low)
 
             if last_tick:
                 bar.volume += max(tick.volume - last_tick.volume, 0)
-                bar.turnover += max(tick.turnover - last_tick.turnover, 0)
+                bar.money += max(tick.turnover - last_tick.turnover, 0)
 
-            if bar.datetime.minute != last_tick.datetime.minute:
+            if bar.date.minute != last_tick.datetime.minute:
                 period_count += 1
                 
                 if self.period == period_count:
-                    bar.datetime.replace(second=0, microsecond=0)
+                    bar.date.replace(second=0, microsecond=0)
                     self.on_bar(bar)
 
                     self.bars.pop(tick.vt_symbol)

@@ -3,6 +3,7 @@ from time import sleep
 
 from datetime import datetime
 from typing import Set, Tuple
+from base.engine import LogEngine
 
 from config import FILE_SETTING
 from engine import MainEngine, DataEngine
@@ -15,6 +16,8 @@ from vnpy.trader.constant import Direction
 
 async def run():
     engine = MainEngine()
+    engine.add_engine(LogEngine)
+    engine.add_engine(DataEngine)
 
     while True:
         if engine.is_trading_time():

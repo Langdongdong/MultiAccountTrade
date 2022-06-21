@@ -1,4 +1,9 @@
 from dataclasses import dataclass
+from datetime import datetime
+
+import pandas
+
+from utility import to_df
 from constant import OrderMode
 from vnpy.trader.constant import Exchange
 
@@ -40,3 +45,22 @@ class OrderAsking:
                 return OrderMode.COVER
             else:
                 return OrderMode.SELL
+
+@dataclass
+class MongodbBar:
+    symbol: str
+    open: float = 0
+    close: float = 0
+    high: float = 0
+    low: float = 0
+    volume: float = 0
+    money: float = 0
+    avg: float = 0
+    high_limit: float = 0
+    low_limit: float = 0
+    pre_close: float = 0
+    open_interest: float = 0
+    date: datetime = None
+
+    def to_df(self) -> pandas.DataFrame:
+         return pandas.DataFrame([self.__dict__])
