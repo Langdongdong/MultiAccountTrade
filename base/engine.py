@@ -410,11 +410,7 @@ class BaseEngine(ABC):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
         self.main_engine: MainEngine = main_engine
         self.event_engine: EventEngine = event_engine
-
-    @abstractmethod
-    def close(self) -> None:
-        pass
-
+        
 
 class DataEngine(BaseEngine):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
@@ -518,9 +514,6 @@ class DataEngine(BaseEngine):
         else:
             self.main_engine.log(f"Backup data is None", gateway_name)
 
-    def close(self) -> None:
-        return super().close()
-
 
 class LogEngine(BaseEngine):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
@@ -572,8 +565,6 @@ class LogEngine(BaseEngine):
     def _register_event(self) -> None:
         self.event_engine.register(EVENT_LOG, self._process_log_event)
 
-    def close(self) -> None:
-        return super().close()
 
 class BarEngine(BaseEngine):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
@@ -638,6 +629,3 @@ class BarEngine(BaseEngine):
                 self.period_counts[tick.vt_symbol] = period_count
 
         self.last_ticks[tick.vt_symbol] = tick
-
-    def close(self) -> None:
-        return super().close()
