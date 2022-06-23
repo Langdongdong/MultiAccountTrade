@@ -1,24 +1,14 @@
+from distutils.command.config import config
 import logging, pathlib, pandas, time, re
 
 from copy import copy
 from datetime import datetime
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Any, Callable, Dict, List, Optional, Set, Type
 
 from utility import get_df
+from setting import settings
 from object import MongodbBar
-from config import (
-    AM_SYMBOL_SETTING,
-    ACCOUNT_SETTING,
-    FILE_SETTING,
-    GATEWAY_SETTING
-)
-from constant import (
-    DAY_START,
-    DAY_END,
-    NIGHT_START,
-    NIGHT_END
-)
 
 from vnpy.event import Event, EventEngine
 from vnpy.trader.gateway import BaseGateway
@@ -27,7 +17,6 @@ from vnpy.trader.constant import (
     Direction,
     OrderType,
     Exchange,
-    Interval,
 )
 from vnpy.trader.event import (
     EVENT_LOG,
@@ -58,7 +47,8 @@ class MainEngine():
     """
     Only use for CTP like api.
     """
-    def __init__(self) -> None:
+    def __init__(self, configs: Dict[str, Any]) -> None:
+        self.configs = configs
 
         self.ticks: Dict[str, TickData] = {}
         self.orders: Dict[str, OrderData] = {}
@@ -73,84 +63,60 @@ class MainEngine():
         self.event_engine.start()
 
         self.engines: Dict[str, BaseEngine] = {}
-        # self.add_engine(LogEngine)
+        self.add_engine(LogEngine)
 
         self.gateways: Dict[str, BaseGateway] = {}
-        self.gateway_classes: Dict[str, Type[BaseGateway]] = {}
-        self.susbcribe_gateway_name: BaseGateway = None
         self._add_gateways()
 
         self.log("Engine inited")
     
     @staticmethod
     def is_trading_time() -> bool:
-        current_time = datetime.now().time()
-        if (
-            DAY_START <= current_time <= DAY_END
-            or NIGHT_START <= current_time
-            or NIGHT_END >= current_time
-        ):
+        if MainEngine.is_day_trading_time or MainEngine.is_night_trading_time:
             return True
         return False
 
     @staticmethod
     def is_day_trading_time() -> bool:
         current_time = datetime.now().time()
-        if DAY_START <= current_time <= DAY_END:
+        if settings.get("tradingtime.daystart") <= current_time <= settings.get("tradingtime.dayend"):
             return True
         return False
 
     @staticmethod
     def is_night_trading_time() -> bool:
         current_time = datetime.now().time()
-        if (NIGHT_START <= current_time) or (NIGHT_END >= current_time):
+        if settings.get("tradingtime.nightstart") <= current_time or settings.get("tradingtime.nightend") >= current_time:
             return True
         return False
 
     @staticmethod
     def filter_am_symbol(vt_symbols: Set[str]) -> Set[str]:
-        return {vt_symbol for vt_symbol in vt_symbols if re.match("[^0-9]*", vt_symbol, re.I).group().upper() not in AM_SYMBOL_SETTING}
+        return {vt_symbol for vt_symbol in vt_symbols if re.match("[^0-9]*", vt_symbol, re.I).group().upper() not in settings.get("symbol.day")}
     
     @staticmethod
     def filer_pm_symbol(vt_symbols: Set[str]) -> Set[str]:
-        return {vt_symbol for vt_symbol in vt_symbols if re.match("[^0-9]*", vt_symbol, re.I).group().upper() in AM_SYMBOL_SETTING}
+        return {vt_symbol for vt_symbol in vt_symbols if re.match("[^0-9]*", vt_symbol, re.I).group().upper() in settings.get("symbol.day")}
 
     def add_engine(self, engine_class: Any) -> "BaseEngine":
         engine: BaseEngine = engine_class(self, self.event_engine)
         self.engines[engine_class.__name__] = engine
         return engine
 
-    def _add_gateway(self, gateway_class_name: str, gateway_name: str) -> None:
-        gateway_class: Optional[Type[BaseGateway]] = self.get_gateway_class(gateway_class_name)
+    def _add_gateway(self, gateway_name: str, gateway_class: BaseGateway) -> None:
         if gateway_class:
-            gateway = gateway_class(self.event_engine, gateway_name)
+            gateway: BaseGateway = gateway_class(self.event_engine, gateway_name)
             self.gateways[gateway.gateway_name] = gateway
 
     def _add_gateways(self) -> None:
-        self._add_gateway_classes()
+        accounts: Dict[str, Any] = self.configs.get("accounts")
+        for name, config in accounts.items():
+            self._add_gateway(name, config.get("gateway"))
 
-        for gateway_name, setting in ACCOUNT_SETTING.items():
-            gateway_class_name = setting.get("Gateway")
-            if gateway_class_name:
-                self._add_gateway(gateway_class_name, gateway_name)
-
-        self._add_subscribe_gateway_name()
-
-    def _add_gateway_class(self, gateway_class: Type[BaseGateway]) -> None:
-        self.gateway_classes[gateway_class.__name__] = gateway_class
-
-    def _add_gateway_classes(self) -> None:
-        for gateway_class in GATEWAY_SETTING:
-            self._add_gateway_class(gateway_class)
-
-    def _add_subscribe_gateway_name(self) -> None:
-        if self.susbcribe_gateway_name is None:
-            self.susbcribe_gateway_name = self.get_all_gateways()[0].gateway_name
-
-    def _connect(self, setting: Dict[str, str], gateway_name: str) -> None:
+    def _connect(self, config: Dict[str, str], gateway_name: str) -> None:
         gateway: Optional[BaseGateway] = self.get_gateway(gateway_name)
         if gateway:
-            gateway.connect(setting)
+            gateway.connect(config)
         
     def _subscribe(self, req: SubscribeRequest, gateway_name: str) -> None:
         gateway: Optional[BaseGateway] = self.get_gateway(gateway_name)
@@ -270,12 +236,6 @@ class MainEngine():
     def get_gateway(self, gateway_name: str) -> Optional[BaseGateway]:
         return self.gateways.get(gateway_name)
 
-    def get_gateway_class(self, gateway_class_name: str) -> Optional[Type[BaseGateway]]:
-        return self.gateway_classes.get(gateway_class_name)
-
-    def get_subscribe_gateway_name(self) -> Optional[BaseGateway]:
-        return self.susbcribe_gateway_name
-
     def get_engine(self, engine_class_name: str) -> Optional["BaseEngine"]:
         return self.engines.get(engine_class_name)
 
@@ -305,12 +265,6 @@ class MainEngine():
 
     def get_all_gateway_names(self) -> List[str]:
         return list(self.gateways.keys())
-        
-    def get_all_gateway_classes(self) -> List[Type[BaseGateway]]:
-        return list(self.gateway_classes.values())
-
-    def get_all_gateway_class_names(self) -> List[str]:
-        return list(self.gateway_classes.keys())
 
     def get_all_ticks(self, use_df: bool = False) -> List[TickData]:
         return get_df(list(self.ticks.values()), use_df)
@@ -343,11 +297,12 @@ class MainEngine():
         return False
 
     def connect(self) -> None:
-        for gateway_name, setting in ACCOUNT_SETTING.items():
-            self._connect(setting, gateway_name)
+        accounts: Dict[str, Any] = self.configs.get("accounts")
+        for gateway_name, config in accounts.items():
+            self._connect(config, gateway_name)
         
         while True:
-            time.sleep(5)
+            time.sleep(3)
             not_inited_gateway_names = [gateway_name for gateway_name in self.get_all_gateway_names() if not self.is_gateway_inited(gateway_name)]
             if not not_inited_gateway_names:
                 break
@@ -355,16 +310,14 @@ class MainEngine():
         self.log("Connected")
         
     def susbcribe(self, vt_symbols: Set[str]) -> None:
-        gateway_name = self.get_subscribe_gateway_name()
-        if gateway_name:
-            for vt_symbol in vt_symbols:
-                contract = self.get_contract(vt_symbol)
-                if contract:
-                    req = SubscribeRequest(
-                        symbol = contract.symbol,
-                        exchange = contract.exchange
-                    )
-                    self._subscribe(req, gateway_name)
+        for vt_symbol in vt_symbols:
+            contract = self.get_contract(vt_symbol)
+            if contract:
+                req = SubscribeRequest(
+                    symbol = contract.symbol,
+                    exchange = contract.exchange
+                )
+                self._subscribe(req, self.get_all_gateway_names()[0])
 
         time.sleep(3)
         self.log(f"Subscribed") 
@@ -410,7 +363,10 @@ class BaseEngine(ABC):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
         self.main_engine: MainEngine = main_engine
         self.event_engine: EventEngine = event_engine
-        
+    
+    def close(self):
+        pass
+
 
 class DataEngine(BaseEngine):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
@@ -532,7 +488,7 @@ class LogEngine(BaseEngine):
     
     def _add_log_dir_path(self) -> None:
         try:
-            self.log_dir_path: pathlib.Path = pathlib.Path(FILE_SETTING.get("LOG_DIR_PATH"))
+            self.log_dir_path: pathlib.Path = pathlib.Path(settings.get("log.dir"))
             if not self.log_dir_path.exists():
                 self.log_dir_path.mkdir()
         except:
