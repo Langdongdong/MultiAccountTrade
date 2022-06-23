@@ -1,6 +1,6 @@
 from enum import Enum
 
-class OrderMode(Enum):
+class OrderRequestType(Enum):
     BUY = "open buy"
     SELL = "close sell"
     SHORT = "open sell"

@@ -1,14 +1,13 @@
-from distutils.command.config import config
 import logging, pathlib, pandas, time, re
 
 from copy import copy
 from datetime import datetime
 from abc import ABC
-from typing import Any, Callable, Dict, List, Optional, Set, Type
+from typing import Any, Callable, Dict, List, Optional, Set
+from base.object import BarData
 
 from utility import get_df
 from setting import settings
-from object import MongodbBar
 
 from vnpy.event import Event, EventEngine
 from vnpy.trader.gateway import BaseGateway
@@ -455,7 +454,6 @@ class DataEngine(BaseEngine):
         self.main_engine.log("Data loaded", gateway_name)
         return data
         
-
     def delete_data(self, gateway_name: str) -> None:
         self.datas.pop(gateway_name, None)
 
@@ -526,7 +524,7 @@ class BarEngine(BaseEngine):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
         super().__init__(main_engine, event_engine)
 
-        self.bars: Dict[str, MongodbBar] = {}
+        self.bars: Dict[str, BarData] = {}
         self.last_ticks: Dict[str, TickData] = {}
         self.period_counts: Dict[str, int] = {}
 
@@ -541,12 +539,12 @@ class BarEngine(BaseEngine):
         self.update_minute_bar(tick)
 
     def update_minute_bar(self, tick: TickData) -> None:
-        bar: MongodbBar = self.bars.get(tick.vt_symbol)
+        bar: BarData = self.bars.get(tick.vt_symbol)
         last_tick: TickData = self.last_ticks.get(tick.vt_symbol)
         period_count: int = self.period_counts.get(tick.vt_symbol, 0)
         
         if not bar:
-            self.bars[tick.vt_symbol] = MongodbBar(
+            self.bars[tick.vt_symbol] = BarData(
                 symbol = tick.symbol,
                 open = tick.last_price,
                 close = tick.last_price,
