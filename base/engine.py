@@ -46,8 +46,9 @@ class MainEngine():
     """
     Only use for CTP like api.
     """
-    def __init__(self, configs: Dict[str, Any]) -> None:
-        self.configs = configs
+    def __init__(self) -> None:
+        self.event_engine = EventEngine()
+        self.event_engine.start()
 
         self.ticks: Dict[str, TickData] = {}
         self.orders: Dict[str, OrderData] = {}
@@ -57,15 +58,11 @@ class MainEngine():
         self.positions: Dict[str, PositionData] = {}
         self.active_orders: Dict[str, OrderData] = {}
 
-        self.event_engine = EventEngine()
-        self._register_process_event()
-        self.event_engine.start()
-
-        self.engines: Dict[str, BaseEngine] = {}
-        self.add_engine(LogEngine)
-
         self.gateways: Dict[str, BaseGateway] = {}
-        self._add_gateways()
+        self.engines: Dict[str, BaseEngine] = {}
+
+        self.add_engine(LogEngine)
+        self._register_process_event()
 
         self.log("Engine inited")
     
@@ -102,15 +99,10 @@ class MainEngine():
         self.engines[engine_class.__name__] = engine
         return engine
 
-    def _add_gateway(self, gateway_name: str, gateway_class: BaseGateway) -> None:
-        if gateway_class:
-            gateway: BaseGateway = gateway_class(self.event_engine, gateway_name)
-            self.gateways[gateway.gateway_name] = gateway
-
-    def _add_gateways(self) -> None:
-        accounts: Dict[str, Any] = self.configs.get("accounts")
-        for name, config in accounts.items():
-            self._add_gateway(name, config.get("gateway"))
+    def add_gateway(self, gateway_class: BaseGateway, gateway_name: str) -> BaseGateway:
+        gateway: BaseGateway = gateway_class(self.event_engine, gateway_name)
+        self.gateways[gateway.gateway_name] = gateway
+        return gateway
 
     def _connect(self, config: Dict[str, str], gateway_name: str) -> None:
         gateway: Optional[BaseGateway] = self.get_gateway(gateway_name)
@@ -295,18 +287,18 @@ class MainEngine():
             return gateway.td_api.contract_inited
         return False
 
-    def connect(self) -> None:
-        accounts: Dict[str, Any] = self.configs.get("accounts")
-        for gateway_name, config in accounts.items():
-            self._connect(config, gateway_name)
+    # def connect(self) -> None:
+    #     accounts: Dict[str, Any] = self.configs.get("accounts")
+    #     for gateway_name, config in accounts.items():
+    #         self._connect(config, gateway_name)
         
-        while True:
-            time.sleep(3)
-            not_inited_gateway_names = [gateway_name for gateway_name in self.get_all_gateway_names() if not self.is_gateway_inited(gateway_name)]
-            if not not_inited_gateway_names:
-                break
+    #     while True:
+    #         time.sleep(3)
+    #         not_inited_gateway_names = [gateway_name for gateway_name in self.get_all_gateway_names() if not self.is_gateway_inited(gateway_name)]
+    #         if not not_inited_gateway_names:
+    #             break
 
-        self.log("Connected")
+    #     self.log("Connected")
         
     def susbcribe(self, vt_symbols: Set[str]) -> None:
         for vt_symbol in vt_symbols:
