@@ -78,14 +78,14 @@ class MainEngine():
     @staticmethod
     def is_day_trading_time() -> bool:
         current_time = datetime.now().time()
-        if settings.get("tradingtime.daystart") <= current_time <= settings.get("tradingtime.dayend"):
+        if settings.get("trading_time.day_start") <= current_time <= settings.get("trading_time.day_end"):
             return True
         return False
 
     @staticmethod
     def is_night_trading_time() -> bool:
         current_time = datetime.now().time()
-        if settings.get("tradingtime.nightstart") <= current_time or settings.get("tradingtime.nightend") >= current_time:
+        if settings.get("trading_time.night_start") <= current_time or settings.get("trading_time.night_end") >= current_time:
             return True
         return False
 
