@@ -62,9 +62,7 @@ class MainEngine():
         self.engines: Dict[str, BaseEngine] = {}
 
         self.add_engine(LogEngine)
-        self._register_process_event()
-
-        self.log("Engine inited")
+        self.register_process_event()
     
     @staticmethod
     def is_trading_time() -> bool:
@@ -104,23 +102,33 @@ class MainEngine():
         self.gateways[gateway.gateway_name] = gateway
         return gateway
 
-    def _connect(self, config: Dict[str, str], gateway_name: str) -> None:
+    def connect(self, config: Dict[str, Any], gateway_name: str) -> None:
         gateway: Optional[BaseGateway] = self.get_gateway(gateway_name)
         if gateway:
             gateway.connect(config)
         
-    def _subscribe(self, req: SubscribeRequest, gateway_name: str) -> None:
+    def subscribe(self, vt_symbols: Set[str], gateway_name: str) -> None:
         gateway: Optional[BaseGateway] = self.get_gateway(gateway_name)
         if gateway:
-            gateway.subscribe(req)
+            for vt_symbol in vt_symbols:
+                contract = self.get_contract(vt_symbol)
+                if contract:
+                    req = SubscribeRequest(
+                        symbol = contract.symbol,
+                        exchange = contract.exchange
+                    )
+                    gateway.subscribe(req)
 
-    def _send_order(self, req: OrderRequest, gateway_name: str) -> str:
-        gateway: Optional[BaseGateway] = self.get_gateway(gateway_name)
-        if gateway:
-            self.log(f"Order {req.vt_symbol} {req.direction.value} {req.offset.value} {req.volume}", gateway_name)
-            return gateway.send_order(req)
-
-    def _send_taker_order(self, vt_symbol: str, volume: float, direction: Direction, offset: Offset, gateway_name: str) -> List[str]:
+    def send_order(
+            self, 
+            vt_symbol: str, 
+            volume: float, 
+            direction: Direction, 
+            offset: Offset, 
+            gateway_name: str, 
+            is_taker: bool= True, 
+            price: float = 0
+        ) -> List[str]:
         reqs: List[OrderRequest] = []
         vt_orderids: List[str] = []
         
@@ -129,12 +137,12 @@ class MainEngine():
 
         if tick is None or contract is None:
             vt_orderids.append("")
-            self.log(f"{vt_symbol} tick or contract data is None", gateway_name)
             return vt_orderids
 
-        price: float = tick.ask_price_1 + contract.pricetick * 2 \
-            if direction == Direction.LONG \
-            else tick.bid_price_1 - contract.pricetick * 2
+        if is_taker:
+            price: float = tick.ask_price_1 + contract.pricetick * 2 \
+                if direction == Direction.LONG \
+                else tick.bid_price_1 - contract.pricetick * 2
 
         req = OrderRequest(
             symbol = contract.symbol,
@@ -153,11 +161,9 @@ class MainEngine():
 
             if position is None:
                 vt_orderids.append("")
-                self.log(f"{vt_symbol} {direction.value} position data is None", gateway_name)
                 return vt_orderids
             elif position.volume - position.frozen < volume:
                 vt_orderids.append("")
-                self.log(f"{vt_symbol} {direction.value} {offset.value} {volume} no enough position volume to close", gateway_name, logging.ERROR)
                 return vt_orderids
 
             if contract.exchange in [Exchange.SHFE, Exchange.INE]:
@@ -176,21 +182,20 @@ class MainEngine():
 
         reqs.append(req)
 
-        for req in reqs:
-            vt_orderids.append(self._send_order(req, gateway_name))
-
-        return vt_orderids
-
-    def _cancel_order(self, req: CancelRequest, gateway_name:str) -> None:
         gateway: Optional[BaseGateway] = self.get_gateway(gateway_name)
         if gateway:
-            gateway.cancel_order(req)
+            for req in reqs:
+                vt_orderids.append(gateway.send_order(req))
+        else:
+            vt_orderids.append("")
+
+        return vt_orderids
     
-    def _process_tick_event(self, event: Event) -> None:
+    def process_tick_event(self, event: Event) -> None:
         tick: TickData = event.data
         self.ticks[tick.vt_symbol] = tick
 
-    def _process_order_event(self, event: Event) -> None:
+    def process_order_event(self, event: Event) -> None:
         order: OrderData = event.data
         self.orders[order.vt_orderid] = order
 
@@ -199,30 +204,30 @@ class MainEngine():
         elif order.vt_orderid in self.active_orders:
             self.active_orders.pop(order.vt_orderid)
 
-    def _process_trade_event(self, event: Event) -> None:
+    def process_trade_event(self, event: Event) -> None:
         trade: TradeData = event.data
         self.trades[trade.vt_tradeid] = trade
 
-    def _process_position_event(self, event: Event) -> None:
+    def process_position_event(self, event: Event) -> None:
         position: PositionData = event.data
         self.positions[position.vt_positionid] = position
 
-    def _process_contract_event(self, event: Event) -> None:
+    def process_contract_event(self, event: Event) -> None:
         contract: ContractData = event.data
         if self.get_contract(contract.vt_symbol) is None:
             self.contracts[contract.vt_symbol] = contract
 
-    def _process_account_event(self, event: Event) -> None:
+    def process_account_event(self, event: Event) -> None:
         account: AccountData = event.data
         self.accounts[account.gateway_name] = account
 
-    def _register_process_event(self) -> None:
-        self.event_engine.register(EVENT_TICK, self._process_tick_event)
-        self.event_engine.register(EVENT_ORDER, self._process_order_event)
-        self.event_engine.register(EVENT_TRADE, self._process_trade_event)
-        self.event_engine.register(EVENT_ACCOUNT, self._process_account_event)
-        self.event_engine.register(EVENT_CONTRACT, self._process_contract_event)
-        self.event_engine.register(EVENT_POSITION, self._process_position_event)
+    def register_process_event(self) -> None:
+        self.event_engine.register(EVENT_TICK, self.process_tick_event)
+        self.event_engine.register(EVENT_ORDER, self.process_order_event)
+        self.event_engine.register(EVENT_TRADE, self.process_trade_event)
+        self.event_engine.register(EVENT_ACCOUNT, self.process_account_event)
+        self.event_engine.register(EVENT_CONTRACT, self.process_contract_event)
+        self.event_engine.register(EVENT_POSITION, self.process_position_event)
 
     def get_gateway(self, gateway_name: str) -> Optional[BaseGateway]:
         return self.gateways.get(gateway_name)
@@ -286,52 +291,26 @@ class MainEngine():
         if gateway:
             return gateway.td_api.contract_inited
         return False
-
-    # def connect(self) -> None:
-    #     accounts: Dict[str, Any] = self.configs.get("accounts")
-    #     for gateway_name, config in accounts.items():
-    #         self._connect(config, gateway_name)
-        
-    #     while True:
-    #         time.sleep(3)
-    #         not_inited_gateway_names = [gateway_name for gateway_name in self.get_all_gateway_names() if not self.is_gateway_inited(gateway_name)]
-    #         if not not_inited_gateway_names:
-    #             break
-
-    #     self.log("Connected")
-        
-    def susbcribe(self, vt_symbols: Set[str]) -> None:
-        for vt_symbol in vt_symbols:
-            contract = self.get_contract(vt_symbol)
-            if contract:
-                req = SubscribeRequest(
-                    symbol = contract.symbol,
-                    exchange = contract.exchange
-                )
-                self._subscribe(req, self.get_all_gateway_names()[0])
-
-        time.sleep(3)
-        self.log(f"Subscribed") 
         
     def buy(self, vt_symbol: str, volume: float, gateway_name: str) -> List[str]:
-        return self._send_taker_order(vt_symbol, volume, Direction.LONG, Offset.OPEN, gateway_name)
+        return self.send_order(vt_symbol, volume, Direction.LONG, Offset.OPEN, gateway_name)
     
     def sell(self, vt_symbol: str, volume: float, gateway_name: str) -> List[str]:
-        return self._send_taker_order(vt_symbol, volume, Direction.SHORT, Offset.CLOSE, gateway_name)
+        return self.send_order(vt_symbol, volume, Direction.SHORT, Offset.CLOSE, gateway_name)
 
     def short(self, vt_symbol: str, volume: float, gateway_name: str) -> List[str]:
-        return self._send_taker_order(vt_symbol, volume, Direction.SHORT, Offset.OPEN, gateway_name)
+        return self.send_order(vt_symbol, volume, Direction.SHORT, Offset.OPEN, gateway_name)
 
     def cover(self, vt_symbol: str, volume: float, gateway_name: str) -> List[str]:
-        return self._send_taker_order(vt_symbol, volume, Direction.LONG, Offset.CLOSE, gateway_name)
+        return self.send_order(vt_symbol, volume, Direction.LONG, Offset.CLOSE, gateway_name)
 
-    def cancel_active_order(self, vt_orderid: str) -> None:
+    def cancel_order(self, vt_orderid: str) -> None:
         active_order = self.get_active_order(vt_orderid)
         if active_order:
             req = active_order.create_cancel_request()
-            self._cancel_order(req, active_order.gateway_name)
-            self.log(f"Cancel {active_order.vt_symbol} {active_order.direction.value} {active_order.offset.value} {active_order.volume - active_order.traded}", 
-            active_order.gateway_name)
+            gateway: Optional[BaseGateway] = self.get_gateway(active_order.gateway_name)
+            if gateway:
+                gateway.cancel_order(req)
 
     def log(self, msg: str, gateway_name: str = "", level: int = logging.INFO) -> None:
         log = LogData(gateway_name, msg, level)
@@ -346,8 +325,6 @@ class MainEngine():
 
         for gateway in self.gateways.values():
             gateway.close()
-
-        self.log("Engine closed")
 
 
 class BaseEngine(ABC):

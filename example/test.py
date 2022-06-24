@@ -1,10 +1,13 @@
-from object import MongodbBar
-from engine import MainEngine, BarEngine
 
 import re
 
-def on_bar(bar: MongodbBar):
-    print(bar.to_df())
+# def on_bar(bar: MongodbBar):
+#     print(bar.to_df())
+
+def test(price: float = 3):
+    print(price)
+    price = 1
+    print(price)
 
 if __name__ == "__main__":
     # engine = MainEngine()
@@ -14,6 +17,8 @@ if __name__ == "__main__":
     # engine.connect()
 
     # contracts = engine.get_all_contracts()
-    a = "rB2210.SHFE"
+    # a = "rB2210.SHFE"
 
-    print(re.match("\D*", a).group())
+    # print(re.match("\D*", a).group())
+
+    test()
