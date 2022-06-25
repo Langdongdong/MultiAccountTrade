@@ -492,8 +492,10 @@ class LogEngine(BaseEngine):
 
 
 class BarEngine(BaseEngine):
-    def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
+    def __init__(self, main_engine: MainEngine, event_engine: EventEngine, database: BaseDatabase) -> None:
         super().__init__(main_engine, event_engine)
+
+        self.database: BaseDatabase = database
 
         self.bars: Dict[str, BarData] = {}
         self.last_ticks: Dict[str, TickData] = {}
