@@ -1,13 +1,17 @@
 
 import re
-
+from abc import ABC, abstractmethod
 # def on_bar(bar: MongodbBar):
 #     print(bar.to_df())
 
-def test(price: float = 3):
-    print(price)
-    price = 1
-    print(price)
+class Test(ABC):
+    @abstractmethod
+    def foo(self):
+        pass
+
+class Beta(Test):
+    def foo3(self, n):
+        print(n)
 
 if __name__ == "__main__":
     # engine = MainEngine()
@@ -21,4 +25,6 @@ if __name__ == "__main__":
 
     # print(re.match("\D*", a).group())
 
-    test()
+    b = Beta()
+    
+    
