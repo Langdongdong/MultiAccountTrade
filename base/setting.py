@@ -7,8 +7,8 @@ settings: Dict[str, Any] = {
     "symbol.day": {"UR","JD","AP","SM","SF","LH"},
 
     "database.name": "database.db",
-    "database.host": "",
-    "database.port": 0,
+    "database.host": "localhost",
+    "database.port": 27017,
     "database.username": "",
     "database.password": "",
 

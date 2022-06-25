@@ -1,19 +1,11 @@
-
-import re
-from abc import ABC, abstractmethod
-# def on_bar(bar: MongodbBar):
-#     print(bar.to_df())
-
-class Test(ABC):
-    @abstractmethod
-    def foo(self):
-        pass
-
-class Beta(Test):
-    def foo3(self, n):
-        print(n)
+# import os
+# from database.mongodb import MongoDatabase
+from datetime import datetime
+import os, sys
 
 if __name__ == "__main__":
+    sys.path.append(os.getcwd())
+
     # engine = MainEngine()
     # bar_engine: BarEngine = engine.add_engine(BarEngine)
     # bar_engine.init(1, on_bar)
@@ -24,7 +16,7 @@ if __name__ == "__main__":
     # a = "rB2210.SHFE"
 
     # print(re.match("\D*", a).group())
-
-    b = Beta()
-    
-    
+    date = datetime.now().date()
+    print(date)
+    print(os.getcwd()+"\..")
+    # db = MongoDatabase()
