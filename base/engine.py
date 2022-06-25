@@ -1,13 +1,15 @@
-import logging, pathlib, pandas, time, re
+import logging, pathlib, pandas, re
 
-from copy import copy
-from datetime import datetime
 from abc import ABC
+from datetime import datetime
+from copy import copy
 from typing import Any, Callable, Dict, List, Optional, Set
-from base.object import BarData
 
-from utility import get_df
-from setting import settings
+from database.database import BaseDatabase
+
+from .utility import get_df
+from .setting import settings
+from .object import BarData
 
 from vnpy.event import Event, EventEngine
 from vnpy.trader.gateway import BaseGateway
@@ -36,7 +38,6 @@ from vnpy.trader.object import (
     PositionData,
     OrderRequest,
     SubscribeRequest,
-    CancelRequest
 )
 
 """
@@ -65,22 +66,22 @@ class MainEngine():
         self.register_process_event()
     
     @staticmethod
-    def is_trading_time() -> bool:
-        if MainEngine.is_day_trading_time or MainEngine.is_night_trading_time:
+    def is_tradingtime() -> bool:
+        if MainEngine.is_day_tradingtime or MainEngine.is_night_tradingtime:
             return True
         return False
 
     @staticmethod
-    def is_day_trading_time() -> bool:
+    def is_day_tradingtime() -> bool:
         current_time = datetime.now().time()
-        if settings.get("trading_time.day_start") <= current_time <= settings.get("trading_time.day_end"):
+        if settings.get("tradingtime.day_start") <= current_time <= settings.get("tradingtime.day_end"):
             return True
         return False
 
     @staticmethod
-    def is_night_trading_time() -> bool:
+    def is_night_tradingtime() -> bool:
         current_time = datetime.now().time()
-        if settings.get("trading_time.night_start") <= current_time or settings.get("trading_time.night_end") >= current_time:
+        if settings.get("tradingtime.night_start") <= current_time or settings.get("tradingtime.night_end") >= current_time:
             return True
         return False
 
@@ -347,6 +348,7 @@ class DataEngine(BaseEngine):
 
         self._add_load_dir_path()
         self._add_backup_dir_path()
+    
 
     def _add_load_dir_path(self) -> None:
         try:
@@ -446,14 +448,14 @@ class LogEngine(BaseEngine):
         self.formatter: logging.Formatter = logging.Formatter("%(asctime)s  %(levelname)s: %(message)s")
         self.logger.setLevel(logging.INFO)
         
-        self._add_log_dir_path()
+        self.add_log_dir_path()
 
-        self._add_file_handler()
-        self._add_console_handler()
+        self.add_file_handler()
+        self.add_console_handler()
 
-        self._register_event()
+        self.register_log_event()
     
-    def _add_log_dir_path(self) -> None:
+    def add_log_dir_path(self) -> None:
         try:
             self.log_dir_path: pathlib.Path = pathlib.Path(settings.get("log.dir"))
             if not self.log_dir_path.exists():
@@ -461,7 +463,7 @@ class LogEngine(BaseEngine):
         except:
             self.main_engine.log("Log directory path cause error.", level=logging.ERROR)
 
-    def _add_file_handler(self) -> None:
+    def add_file_handler(self) -> None:
         file_name: str = f"{datetime.now().strftime('%Y%m%d')}.log"
         file_path: pathlib.Path = self.log_dir_path.joinpath(file_name)
 
@@ -474,19 +476,19 @@ class LogEngine(BaseEngine):
             self.main_engine.log("Log file path cause error", level=logging.ERROR)
 
 
-    def _add_console_handler(self) -> None:
+    def add_console_handler(self) -> None:
         console_handler: logging.StreamHandler = logging.StreamHandler()
         console_handler.setLevel(logging.INFO)
         console_handler.setFormatter(self.formatter)
 
         self.logger.addHandler(console_handler)
 
-    def _process_log_event(self, event: Event) -> None:
+    def process_log_event(self, event: Event) -> None:
         log: LogData = event.data
         self.logger.log(log.level, f"{log.gateway_name} {log.msg}")
 
-    def _register_event(self) -> None:
-        self.event_engine.register(EVENT_LOG, self._process_log_event)
+    def register_log_event(self) -> None:
+        self.event_engine.register(EVENT_LOG, self.process_log_event)
 
 
 class BarEngine(BaseEngine):
@@ -501,9 +503,9 @@ class BarEngine(BaseEngine):
         self.period: int = period
         self.on_bar: Callable = on_bar
 
-        self.event_engine.register(EVENT_TICK, self._process_tick_event)
+        self.event_engine.register(EVENT_TICK, self.process_tick_event)
 
-    def _process_tick_event(self, event: Event):
+    def process_tick_event(self, event: Event):
         tick: TickData = event.data
         self.update_minute_bar(tick)
 

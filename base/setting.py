@@ -12,8 +12,8 @@ settings: Dict[str, Any] = {
     "database.username": "",
     "database.password": "",
 
-    "trading_time.day_start": datetime.time(8, 45),
-    "trading_time.day_end": datetime.time(15, 0),
-    "trading_time.night_start": datetime.time(20, 45),
-    "trading_time.night_end": datetime.time(2, 45),
+    "tradingtime.day_start": datetime.time(8, 45),
+    "tradingtime.day_end": datetime.time(15, 0),
+    "tradingtime.night_start": datetime.time(20, 45),
+    "tradingtime.night_end": datetime.time(2, 45),
 }
