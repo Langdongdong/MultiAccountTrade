@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import time
 from typing import Any, Dict
 
 settings: Dict[str, Any] = {
@@ -12,8 +12,8 @@ settings: Dict[str, Any] = {
     "database.username": "",
     "database.password": "",
 
-    "tradingtime.day_start": datetime.time(8, 45),
-    "tradingtime.day_end": datetime.time(15, 0),
-    "tradingtime.night_start": datetime.time(20, 45),
-    "tradingtime.night_end": datetime.time(2, 45),
+    "tradingtime.day_start": time(8, 45),
+    "tradingtime.day_end": time(15, 0),
+    "tradingtime.night_start": time(20, 45),
+    "tradingtime.night_end": time(2, 45),
 }

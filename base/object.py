@@ -3,7 +3,7 @@ from datetime import datetime
 
 import pandas
 
-from constant import OrderRequestType
+from .constant import OrderRequestType
 from vnpy.trader.constant import Exchange
 
 @dataclass
