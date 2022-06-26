@@ -14,3 +14,12 @@ class BaseDatabase(ABC):
     @abstractmethod
     def delete_bar_data(self, symbol: str) -> int:
         pass
+
+database: BaseDatabase = None
+
+def get_database() -> BaseDatabase:
+    global database
+    if database:
+        return database
+
+    

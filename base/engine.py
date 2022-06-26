@@ -6,6 +6,7 @@ from copy import copy
 from typing import Any, Callable, Dict, List, Optional, Set, Type
 
 from database.database import BaseDatabase
+from database.mongo import MongoDatabase
 
 from .utility import get_df
 from .setting import settings
@@ -490,8 +491,13 @@ class LogEngine(BaseEngine):
 
 
 class BarEngine(BaseEngine):
-    def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
+    def __init__(self, main_engine: MainEngine, event_engine: EventEngine, database: BaseDatabase = None) -> None:
         super().__init__(main_engine, event_engine)
+
+        if database:
+            self.database: BaseDatabase = database
+        else:
+            self.database: BaseDatabase = MongoDatabase()
 
         self.bars: Dict[str, BarData] = {}
         self.last_ticks: Dict[str, TickData] = {}
@@ -552,3 +558,10 @@ class BarEngine(BaseEngine):
                 self.period_counts[tick.vt_symbol] = period_count
 
         self.last_ticks[tick.vt_symbol] = tick
+
+
+class DatabaseEngine(BaseEngine):
+    def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
+        super().__init__(main_engine, event_engine)
+
+    def 

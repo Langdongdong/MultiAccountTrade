@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pymongo import MongoClient
 from base.engine import MainEngine, BarEngine
-from database.mongodb import MongoDatabase
+from database.mongo import MongoDatabase
 from vnpy_ctp import CtpGateway
 import time
 
