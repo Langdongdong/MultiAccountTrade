@@ -14,7 +14,7 @@ from base.object import BarData
 from base.setting import settings
 
 class MongoDatabase(BaseDatabase):
-    def __init__(self, collection_name: str) -> None:
+    def __init__(self, collection_name: str = "") -> None:
         super().__init__()
 
         self.name: str = settings.get("database.name")
@@ -41,7 +41,9 @@ class MongoDatabase(BaseDatabase):
             )
 
         self.database: Database = self.client.get_database(self.name)
-        self.collection: Collection = self.database.get_collection(collection_name)
+
+        if collection_name:
+            self.collection: Collection = self.database.get_collection(collection_name)
 
     def set_collection(self, collection_name: str) -> None:
         self.collection = self.database.get_collection(collection_name)
@@ -93,7 +95,7 @@ class MongoDatabase(BaseDatabase):
         
         return bars
 
-    def delelte_bar_data(self, symbol: str) -> int:
+    def delete_bar_data(self, symbol: str) -> int:
         filter: Dict[str, Any] = {
             "symbol": symbol
         }

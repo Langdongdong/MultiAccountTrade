@@ -3,7 +3,7 @@ import logging, pathlib, pandas, re
 from abc import ABC
 from datetime import datetime
 from copy import copy
-from typing import Any, Callable, Dict, List, Optional, Set
+from typing import Any, Callable, Dict, List, Optional, Set, Type
 
 from database.database import BaseDatabase
 
@@ -98,15 +98,13 @@ class MainEngine():
         self.engines[engine_class.__name__] = engine
         return engine
 
-    def add_gateway(self, gateway_class: BaseGateway, gateway_name: str) -> BaseGateway:
-        gateway: BaseGateway = gateway_class(self.event_engine, gateway_name)
-        self.gateways[gateway.gateway_name] = gateway
-        return gateway
-
-    def connect(self, config: Dict[str, Any], gateway_name: str) -> None:
-        gateway: Optional[BaseGateway] = self.get_gateway(gateway_name)
-        if gateway:
-            gateway.connect(config)
+    def connect(self, accounts: Dict[str, Any]) -> None:
+        for account_name, account_setting in accounts.items():
+            gateway_class: Type[BaseGateway] =  account_setting.get("gateway")
+            if gateway_class:
+                gateway: BaseGateway = gateway_class(self.event_engine, account_name)
+                self.gateways[gateway.gateway_name] = gateway
+                gateway.connect(account_setting)
         
     def subscribe(self, vt_symbols: Set[str], gateway_name: str) -> None:
         gateway: Optional[BaseGateway] = self.get_gateway(gateway_name)
@@ -492,10 +490,8 @@ class LogEngine(BaseEngine):
 
 
 class BarEngine(BaseEngine):
-    def __init__(self, main_engine: MainEngine, event_engine: EventEngine, database: BaseDatabase) -> None:
+    def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
         super().__init__(main_engine, event_engine)
-
-        self.database: BaseDatabase = database
 
         self.bars: Dict[str, BarData] = {}
         self.last_ticks: Dict[str, TickData] = {}
