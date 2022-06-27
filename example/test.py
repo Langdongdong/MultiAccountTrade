@@ -1,8 +1,7 @@
 from datetime import datetime
+from base.database import MongoDatabase
 
-from pymongo import MongoClient
 from base.engine import MainEngine, BarEngine
-from database.mongo import MongoDatabase
 from vnpy_ctp import CtpGateway
 import time
 
@@ -31,19 +30,11 @@ configs = {
     },
 }
 
-def on_bar(bar):
-    print(bar)
-
 if __name__ == "__main__":
    
-    # engine = MainEngine()
-    # engine.connect(configs.get("accounts"))
+    engine = MainEngine()
+    engine.connect(configs.get("accounts"))
 
-    # engine.subscribe( {"rb2210.SHFE"}, engine.get_all_gateway_names()[0])
+    engine.subscribe( {"rb2210.SHFE"}, engine.get_all_gateway_names()[0])
 
-    # bar_engine: BarEngine = engine.add_engine(BarEngine)
-    # bar_engine.init(1, on_bar)
-    print(str(datetime.now().date()))
-    mongo = MongoDatabase()
-    dbs = mongo.client.list_database_names()
-    print(dbs)
+    bar_engine: BarEngine = engine.add_engine(BarEngine, period = 1, size = 1, is_persistence = True)

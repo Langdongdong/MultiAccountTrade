@@ -6,9 +6,7 @@ settings: Dict[str, Any] = {
 
     "symbol.day": {"UR","JD","AP","SM","SF","LH"},
 
-
-    "database.name": "mongo",
-    "database.database": "db_bar_min",
+    "database.name": "db_bar_min",
     "database.host": "localhost",
     "database.port": 27017,
     "database.username": "",

@@ -9,12 +9,11 @@ from pymongo.results import DeleteResult
 from pytz import timezone
 from tzlocal import get_localzone_name
 
-from .database import BaseDatabase
 from base.object import BarData
 from base.setting import settings
 
-class MongoDatabase(BaseDatabase):
-    def __init__(self, collection_name: str = "") -> None:
+class MongoDatabase():
+    def __init__(self) -> None:
         super().__init__()
 
         self.name: str = settings.get("database.name")
@@ -42,14 +41,10 @@ class MongoDatabase(BaseDatabase):
 
         self.database: Database = self.client.get_database(self.name)
 
-        if collection_name:
-            self.collection: Collection = self.database.get_collection(collection_name)
-
-    def set_collection(self, collection_name: str) -> None:
-        self.collection = self.database.get_collection(collection_name)
-
-    def insert_bar_data(self, bars: List[BarData]) -> bool:
+    def insert_bar_data(self, bars: List[BarData], collection_name: str) -> bool:
         requests: List[ReplaceOne] = []
+
+        collection: Collection = self.database.get_collection(collection_name)
 
         for bar in bars:
             filter: Dict[str, Any] = {
@@ -73,18 +68,20 @@ class MongoDatabase(BaseDatabase):
                 "date": bar.date
             }
 
-            requests.append(ReplaceOne(filter, data, True))
+            requests.append(ReplaceOne(filter, data, upsert=True))
 
-        self.collection.bulk_write(requests, ordered=False)
-
+        result = collection.bulk_write(requests, ordered=False)
+        print(result.upserted_ids)
         return True
 
-    def load_bar_data(self, symbol: str) -> List[BarData]:
+    def load_bar_data(self, symbol: str, collection_name: str) -> List[BarData]:
+        collection: Collection = self.database.get_collection(collection_name)
+
         filter: Dict[str, Any] = {
             "symbol": symbol
         }
 
-        cursor: Cursor = self.collection.find(filter)
+        cursor: Cursor = collection.find(filter)
 
         bars: List[BarData] = []
         for data in cursor:
@@ -95,11 +92,13 @@ class MongoDatabase(BaseDatabase):
         
         return bars
 
-    def delete_bar_data(self, symbol: str) -> int:
+    def delete_bar_data(self, symbol: str, collection_name: str) -> int:
+        collection: Collection = self.database.get_collection(collection_name)
+
         filter: Dict[str, Any] = {
             "symbol": symbol
         }
 
-        result: DeleteResult = self.collection.delete_many(filter)
+        result: DeleteResult = collection.delete_many(filter)
 
         return result.deleted_count

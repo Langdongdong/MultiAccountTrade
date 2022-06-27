@@ -1,14 +1,13 @@
 import logging, pathlib, pandas, re
 
 from abc import ABC
-from datetime import datetime
+from datetime import datetime, timedelta
 from copy import copy
-from typing import Any, Callable, Dict, List, Optional, Set, Type
+from typing import Any, Dict, List, Optional, Set, Type
 
-from database.database import BaseDatabase
-from database.mongo import MongoDatabase
+from base.database import MongoDatabase
 
-from .utility import get_df
+from .utility import ArrayManager, BarGenerator, get_df
 from .setting import settings
 from .object import BarData
 
@@ -94,8 +93,8 @@ class MainEngine():
     def filer_pm_symbol(vt_symbols: Set[str]) -> Set[str]:
         return {vt_symbol for vt_symbol in vt_symbols if re.match("[^0-9]*", vt_symbol, re.I).group().upper() in settings.get("symbol.day")}
 
-    def add_engine(self, engine_class: Any) -> "BaseEngine":
-        engine: BaseEngine = engine_class(self, self.event_engine)
+    def add_engine(self, engine_class: Any, **kw) -> "BaseEngine":
+        engine: BaseEngine = engine_class(self, self.event_engine, **kw)
         self.engines[engine_class.__name__] = engine
         return engine
 
@@ -107,7 +106,14 @@ class MainEngine():
                 self.gateways[gateway.gateway_name] = gateway
                 gateway.connect(account_setting)
         
-    def subscribe(self, vt_symbols: Set[str], gateway_name: str) -> None:
+        while True:
+            not_inited_gateway_names = [gateway_name for gateway_name in self.get_all_gateway_names() if not self.is_gateway_inited(gateway_name)]
+            if not not_inited_gateway_names:
+                break
+        
+    def subscribe(self, vt_symbols: Set[str], gateway_name: str = None) -> None:
+        if not gateway_name:
+            gateway_name = self.get_all_gateway_names()[0]
         gateway: Optional[BaseGateway] = self.get_gateway(gateway_name)
         if gateway:
             for vt_symbol in vt_symbols:
@@ -491,77 +497,32 @@ class LogEngine(BaseEngine):
 
 
 class BarEngine(BaseEngine):
-    def __init__(self, main_engine: MainEngine, event_engine: EventEngine, database: BaseDatabase = None) -> None:
+    def __init__(self, main_engine: MainEngine, event_engine: EventEngine, period: int = 1, size: int = 1, is_persistence: bool = False) -> None:
         super().__init__(main_engine, event_engine)
+        self.bar_generator_period: int = period
+        self.array_manager_size: int = size
+        self.is_persistance: bool = is_persistence
 
-        if database:
-            self.database: BaseDatabase = database
-        else:
-            self.database: BaseDatabase = MongoDatabase()
+        self.bar_generator = BarGenerator(self.bar_generator_period)
+        self.array_manager = ArrayManager(self.array_manager_size)
+        self.database = MongoDatabase()
 
-        self.bars: Dict[str, BarData] = {}
-        self.last_ticks: Dict[str, TickData] = {}
-        self.period_counts: Dict[str, int] = {}
+        self.register_tick_process()
 
-    def init(self, period: int, on_bar: Callable) -> None:
-        self.period: int = period
-        self.on_bar: Callable = on_bar
-
+    def register_tick_process(self) -> None:
         self.event_engine.register(EVENT_TICK, self.process_tick_event)
 
-    def process_tick_event(self, event: Event):
+    def process_tick_event(self, event: Event) -> None:
         tick: TickData = event.data
-        self.update_minute_bar(tick)
+        self.bar_generator.update_tick(tick, self.process_bar_event)
 
-    def update_minute_bar(self, tick: TickData) -> None:
-        bar: BarData = self.bars.get(tick.vt_symbol)
-        last_tick: TickData = self.last_ticks.get(tick.vt_symbol)
-        period_count: int = self.period_counts.get(tick.vt_symbol, 0)
-        
-        if not bar:
-            self.bars[tick.vt_symbol] = BarData(
-                symbol = tick.symbol,
-                open = tick.last_price,
-                close = tick.last_price,
-                high = tick.last_price,
-                low = tick.last_price,
-                avg = None,
-                high_limit = tick.limit_up,
-                low_limit = tick.limit_down,
-                pre_close = tick.pre_close,
-                open_interest = tick.open_interest,
-                date = tick.datetime
-            )
+    def process_bar_event(self, bar: BarData) -> None:
+        self.array_manager.udpate_bar(bar)
+        print(bar)
+        if self.is_persistance:
+            if bar.date.time().hour >= 20:
+                collection_name = (bar.date + timedelta(days=1)).date().strftime("%Y%m%d")
+            else:
+                collection_name = bar.date.date().strftime("%Y%m%d")
 
-        else:
-            bar.date = tick.datetime
-            bar.close = tick.last_price
-            bar.open_interest = tick.open_interest
-
-            bar.high = max(tick.high_price, bar.high)
-            bar.low = min(tick.low_price, bar.low)
-
-            if last_tick:
-                bar.volume += max(tick.volume - last_tick.volume, 0)
-                bar.money += max(tick.turnover - last_tick.turnover, 0)
-
-            if bar.date.minute != last_tick.datetime.minute:
-                period_count += 1
-                
-                if self.period == period_count:
-                    bar.date.replace(second=0, microsecond=0)
-                    self.on_bar(bar)
-
-                    self.bars.pop(tick.vt_symbol)
-                    period_count = 0
-
-                self.period_counts[tick.vt_symbol] = period_count
-
-        self.last_ticks[tick.vt_symbol] = tick
-
-
-class DatabaseEngine(BaseEngine):
-    def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
-        super().__init__(main_engine, event_engine)
-
-    def 
+            self.database.insert_bar_data([bar], collection_name)
