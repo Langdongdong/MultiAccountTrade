@@ -41,25 +41,35 @@ def connect_jq() -> None:
 def subscribe(main_engine: MainEngine, gateway_name: str = None) -> None:
     connect_jq()
 
-    dominant_contracts: Set[str] = set()
+    underlying_symbols: Set[str] = set()
+    dominant_symbols: Set[str] = set()
 
     contracts = main_engine.get_all_contracts()
     for contract in contracts:
         underlying_symbol = re.match("\D*", contract.symbol).group().upper()
+        underlying_symbols.add(underlying_symbol)
+
+    print(underlying_symbols, len(underlying_symbols))
+
+    for underlying_symbol in underlying_symbols:
         dominant_symbol: str = get_dominant_future(underlying_symbol).split('.')[0]
+        dominant_symbols.add(dominant_symbol)
 
-        if contract.symbol.upper() == dominant_symbol:
-            print(contract.symbol.upper(), dominant_symbol)
+    print(dominant_symbols, len(dominant_symbols))
 
-            dominant_contracts.add(contract.vt_symbol)
+    for contract in contracts:
+        if contract.symbol.upper() == 
 
-    print(dominant_contracts)
-    main_engine.subscribe(dominant_contracts, gateway_name)
+    # print(len(dominant_contracts),dominant_contracts)
+    # main_engine.subscribe(dominant_contracts, gateway_name)
 
 if __name__ == "__main__":
     main_engine = MainEngine()
-    bar_engine: BarEngine = main_engine.add_engine(BarEngine, period = 1, size = 1, is_persistence = True)
+    # bar_engine: BarEngine = main_engine.add_engine(BarEngine, period = 1, size = 1, is_persistence = True)
 
     main_engine.connect(configs.get("accounts"))
     subscribe(main_engine)
-
+    # auth('18301717901', 'JQzc666888')
+    # # if not get_dominant_future("PK"):
+    # #     print(1)
+    # print(get_dominant_future("PK"))
