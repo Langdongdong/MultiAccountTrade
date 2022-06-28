@@ -95,6 +95,7 @@ class MainEngine():
 
     def add_engine(self, engine_class: Any, **kw) -> "BaseEngine":
         engine: BaseEngine = engine_class(self, self.event_engine, **kw)
+        print(engine_class.__name__)
         self.engines[engine_class.__name__] = engine
         return engine
 
@@ -518,7 +519,6 @@ class BarEngine(BaseEngine):
 
     def process_bar_event(self, bar: BarData) -> None:
         self.array_manager.udpate_bar(bar)
-        print(bar)
         if self.is_persistance:
             if bar.date.time().hour >= 20:
                 collection_name = (bar.date + timedelta(days=1)).date().strftime("%Y%m%d")
