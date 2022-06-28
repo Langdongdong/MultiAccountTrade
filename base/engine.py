@@ -95,7 +95,6 @@ class MainEngine():
 
     def add_engine(self, engine_class: Any, **kw) -> "BaseEngine":
         engine: BaseEngine = engine_class(self, self.event_engine, **kw)
-        print(engine_class.__name__)
         self.engines[engine_class.__name__] = engine
         return engine
 
