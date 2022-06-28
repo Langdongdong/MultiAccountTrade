@@ -70,8 +70,7 @@ class MongoDatabase():
 
             requests.append(ReplaceOne(filter, data, upsert=True))
 
-        result = collection.bulk_write(requests, ordered=False)
-        print(result.upserted_ids)
+        collection.bulk_write(requests, ordered=False)
         return True
 
     def load_bar_data(self, symbol: str, collection_name: str) -> List[BarData]:

@@ -49,6 +49,8 @@ def subscribe(main_engine: MainEngine, gateway_name: str = None) -> None:
         dominant_symbol: str = get_dominant_future(underlying_symbol).split('.')[0]
 
         if contract.symbol.upper() == dominant_symbol:
+            print(contract.symbol.upper(), dominant_symbol)
+
             dominant_contracts.add(contract.vt_symbol)
 
     print(dominant_contracts)
