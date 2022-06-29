@@ -50,7 +50,7 @@ class MainEngine():
     def __init__(self) -> None:
         self.event_engine = EventEngine()
         self.event_engine.start()
-
+        
         self.ticks: Dict[str, TickData] = {}
         self.orders: Dict[str, OrderData] = {}
         self.trades: Dict[str, TradeData] = {}
@@ -142,7 +142,6 @@ class MainEngine():
         contract: Optional[ContractData] = self.get_contract(vt_symbol)
 
         if tick is None or contract is None:
-            vt_orderids.append("")
             return vt_orderids
 
         if is_taker:
@@ -165,11 +164,7 @@ class MainEngine():
                 if direction == Direction.LONG \
                 else self.get_position(f"{gateway_name}.{contract.vt_symbol}.{Direction.LONG.value}")
 
-            if position is None:
-                vt_orderids.append("")
-                return vt_orderids
-            elif position.volume - position.frozen < volume:
-                vt_orderids.append("")
+            if position is None or position.volume - position.frozen < volume:
                 return vt_orderids
 
             if contract.exchange in [Exchange.SHFE, Exchange.INE]:
@@ -192,8 +187,6 @@ class MainEngine():
         if gateway:
             for req in reqs:
                 vt_orderids.append(gateway.send_order(req))
-        else:
-            vt_orderids.append("")
 
         return vt_orderids
     
@@ -225,7 +218,7 @@ class MainEngine():
 
     def process_account_event(self, event: Event) -> None:
         account: AccountData = event.data
-        self.accounts[account.gateway_name] = account
+        self.accounts[account.vt_accountid] = account
 
     def register_process_event(self) -> None:
         self.event_engine.register(EVENT_TICK, self.process_tick_event)
@@ -518,6 +511,7 @@ class BarEngine(BaseEngine):
 
     def process_bar_event(self, bar: BarData) -> None:
         self.array_manager.udpate_bar(bar)
+        print(bar)
         if self.is_persistance:
             if bar.date.time().hour >= 20:
                 collection_name = (bar.date + timedelta(days=1)).date().strftime("%Y%m%d")
