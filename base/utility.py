@@ -1,3 +1,4 @@
+from decimal import Decimal
 import numpy
 
 from typing import Any, Callable, Dict, Optional, Sequence
@@ -72,12 +73,15 @@ class BarGenerator:
                 period_count += 1
                 
                 if self.period == period_count:
-                    bar.date.replace(second=0, microsecond=0)
-                    on_bar(bar)
-
-                    self.bars.pop(tick.vt_symbol)
                     period_count = 0
 
+                    bar.date = bar.date.replace(second=0, microsecond=0)
+                    for k, v in bar.__dict__.items():
+                        if type(v) == float:
+                            setattr(bar, k, float(Decimal.from_float(v).quantize(Decimal('0.00'))))
+                            
+                    on_bar(self.bars.pop(tick.vt_symbol))
+                    
                 self.period_counts[tick.vt_symbol] = period_count
 
         self.last_ticks[tick.vt_symbol] = tick

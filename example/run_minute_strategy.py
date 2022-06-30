@@ -1,8 +1,12 @@
 import re
+from time import sleep
 
 from jqdatasdk import is_auth, auth, get_dominant_future
 
 from typing import Dict, Set
+from pip import main
+
+from sqlalchemy import true
 
 from base.engine import BarEngine, MainEngine
 from vnpy.trader.constant import Product, Exchange
@@ -57,22 +61,31 @@ def subscribe(main_engine: MainEngine, gateway_name: str = None) -> None:
         if exchange == Exchange.CZCE:
             date = re.search("\d+", dominant_symbol).group()[-3:]
             dominant_vt_symbol = f"{underlying_symbol}{date}.{exchange.value}"
-            
         elif exchange == Exchange.CFFEX:
             dominant_vt_symbol = f"{dominant_symbol}.{exchange.value}"
-
         else:
             dominant_vt_symbol = f"{dominant_symbol.lower()}.{exchange.value}"
 
         dominant_vt_symbols.add(dominant_vt_symbol)
 
-    main_engine.close()
+    print(f"Subscribe {len(dominant_vt_symbols)} {dominant_vt_symbols}")
 
-    # main_engine.subscribe(dominant_vt_symbols, gateway_name)
+    main_engine.subscribe(dominant_vt_symbols, gateway_name)
 
 if __name__ == "__main__":
     main_engine = MainEngine()
     bar_engine: BarEngine = main_engine.add_engine(BarEngine, period = 1, size = 1, is_persistence = False)
 
     main_engine.connect(configs.get("accounts"))
-    subscribe(main_engine)
+    # subscribe(main_engine)
+
+
+    main_engine.subscribe({"rb2210.SHFE"})
+    while True:
+        tick = main_engine.get_tick("rb2210.SHFE")
+        if tick:
+            break
+
+
+    print(tick)
+    main_engine.close()
