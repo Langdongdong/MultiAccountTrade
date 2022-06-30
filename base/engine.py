@@ -519,3 +519,6 @@ class BarEngine(BaseEngine):
                 collection_name = bar.date.date().strftime("%Y%m%d")
 
             self.database.insert_bar_data([bar], collection_name)
+
+    def close(self):
+        self.database.client.close()
