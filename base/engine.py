@@ -47,6 +47,13 @@ class MainEngine():
     """
     Only use for CTP like api.
     """
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
     def __init__(self) -> None:
         self.event_engine = EventEngine()
         self.event_engine.start()
