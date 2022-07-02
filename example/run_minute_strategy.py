@@ -1,12 +1,8 @@
 import re
-from time import sleep
 
 from jqdatasdk import is_auth, auth, get_dominant_future
 
 from typing import Dict, Set
-from pip import main
-
-from sqlalchemy import true
 
 from base.engine import BarEngine, MainEngine
 from vnpy.trader.constant import Product, Exchange
@@ -19,8 +15,8 @@ configs = {
             "用户名": "083231",
             "密码": "wodenvshen199!",
             "经纪商代码": "9999",
-            "交易服务器": "180.168.146.187:10201",
-            "行情服务器": "180.168.146.187:10211",
+            "交易服务器": "180.168.146.187:10130",
+            "行情服务器": "180.168.146.187:10131",
             "产品名称": "simnow_client_test",
             "授权编码": "0000000000000000",
             "gateway": CtpGateway
@@ -77,15 +73,15 @@ if __name__ == "__main__":
     bar_engine: BarEngine = main_engine.add_engine(BarEngine, period = 1, size = 1, is_persistence = False)
 
     main_engine.connect(configs.get("accounts"))
-    # subscribe(main_engine)
+    subscribe(main_engine)
 
 
-    main_engine.subscribe({"rb2210.SHFE"})
-    while True:
-        tick = main_engine.get_tick("rb2210.SHFE")
-        if tick:
-            break
+    # main_engine.subscribe({"rb2210.SHFE"})
+    # while True:
+    #     tick = main_engine.get_tick("rb2210.SHFE")
+    #     if tick:
+    #         break
 
 
-    print(tick)
-    main_engine.close()
+    # print(tick)
+    # main_engine.close()

@@ -1,6 +1,9 @@
+from typing import Any, List
+
+
 class BacktestingEngine:
     def __init__(self) -> None:
-        pass
+        self.history_data: List[Any] = []
 
     def load_bar(self) -> None:
         pass
