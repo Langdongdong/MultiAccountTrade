@@ -16,4 +16,6 @@ settings: Dict[str, Any] = {
     "tradingtime.day_end": time(15, 0),
     "tradingtime.night_start": time(20, 45),
     "tradingtime.night_end": time(2, 45),
+
+    (): (time(9,0), time()),
 }
