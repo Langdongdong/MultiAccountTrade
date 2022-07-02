@@ -65,7 +65,7 @@ def subscribe(main_engine: MainEngine, gateway_name: str = None) -> None:
         dominant_vt_symbols.add(dominant_vt_symbol)
 
     print(f"Subscribe {len(dominant_vt_symbols)} {dominant_vt_symbols}")
-
+    
     main_engine.subscribe(dominant_vt_symbols, gateway_name)
 
 if __name__ == "__main__":
