@@ -71,12 +71,6 @@ def subscribe(main_engine: MainEngine, gateway_name: str = None) -> None:
     main_engine.subscribe(dominant_vt_symbols, gateway_name)
 
 
-def run_parent():
-    pass
-
-def run_child():
-    pass
-
 if __name__ == "__main__":
 
     main_engine = MainEngine()
@@ -85,5 +79,5 @@ if __name__ == "__main__":
     main_engine.connect(configs.get("accounts"))
     subscribe(main_engine)
 
-    # print(tick)        
+    # print(tick)
     # main_engine.close()
