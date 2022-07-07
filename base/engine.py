@@ -510,13 +510,12 @@ class LogEngine(BaseEngine):
 
 
 class BarEngine(BaseEngine):
-    def __init__(self, main_engine: MainEngine, event_engine: EventEngine, period: int = 1, size: int = 1, is_persistence: bool = False, collection_name:str ="") -> None:
+    def __init__(self, main_engine: MainEngine, event_engine: EventEngine, period: int = 1, size: int = 1, is_persistence: bool = False) -> None:
         super().__init__(main_engine, event_engine)
         self.bar_generator_period: int = period
         self.array_manager_size: int = size
-
+        
         self.is_persistance: bool = is_persistence
-        self.collection_name: str = collection_name
 
         self.bar_generator = BarGenerator(self.bar_generator_period)
         self.array_manager = ArrayManager(self.array_manager_size)
@@ -545,7 +544,12 @@ class BarEngine(BaseEngine):
             self.persit_bar_data(bar)
     
     def persit_bar_data(self, bar: BarData) -> bool:
-        return self.database.insert_bar_data([bar], self.collection_name)
+        if bar.date.time().hour >= 20:
+                collection_name = (bar.date + timedelta(days=1)).date().strftime("%Y%m%d")
+        else:
+            collection_name = bar.date.date().strftime("%Y%m%d")
+
+        return self.database.insert_bar_data([bar], collection_name)
 
     def close(self):
         self.database.client.close()

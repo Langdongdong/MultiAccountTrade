@@ -78,25 +78,12 @@ def run_child():
     pass
 
 if __name__ == "__main__":
-    is_tradeing: bool = False
 
     main_engine = MainEngine()
-    bar_engine: BarEngine = main_engine.add_engine(BarEngine, period = 1, size = 1, is_persistence = False, collection_name = "")
-    
-    while True:
-        if MainEngine.is_trading_time():
-            is_tradeing = True
-        else:
-            is_tradeing = False
-        
-        if is_tradeing:
-            
+    bar_engine: BarEngine = main_engine.add_engine(BarEngine, period = 1, size = 1, is_persistence = True)
 
-            main_engine.connect(configs.get("accounts"))
-            subscribe(main_engine)
+    main_engine.connect(configs.get("accounts"))
+    subscribe(main_engine)
 
-        
-
-
-    # print(tick)
+    # print(tick)        
     # main_engine.close()
