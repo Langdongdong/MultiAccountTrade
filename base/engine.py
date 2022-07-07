@@ -1,7 +1,7 @@
 import logging, pathlib, pandas, re
 
 from abc import ABC
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 from copy import copy
 from typing import Any, Dict, List, Optional, Set, Type
 
@@ -49,7 +49,7 @@ class MainEngine():
     """
     _instance = None
 
-    def __new__(cls, *args, **kwargs):
+    def __new__(cls):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
@@ -73,31 +73,44 @@ class MainEngine():
         self.register_process_event()
     
     @staticmethod
-    def is_tradingtime() -> bool:
-        if MainEngine.is_day_tradingtime or MainEngine.is_night_tradingtime:
+    def is_trading_time() -> bool:
+        if MainEngine.is_day_trading_time or MainEngine.is_night_trading_time:
             return True
         return False
 
     @staticmethod
-    def is_day_tradingtime() -> bool:
+    def is_day_trading_time() -> bool:
         current_time = datetime.now().time()
-        if settings.get("tradingtime.day_start") <= current_time <= settings.get("tradingtime.day_end"):
-            return True
+        trading_time: Set[time] = settings.get("tradingtime.day")
+        for i in range(0, len(trading_time), 2):
+            if trading_time[i] <= current_time <= trading_time[i+1]:
+                return True
         return False
 
     @staticmethod
-    def is_night_tradingtime() -> bool:
+    def is_night_trading_time() -> bool:
         current_time = datetime.now().time()
-        if settings.get("tradingtime.night_start") <= current_time or settings.get("tradingtime.night_end") >= current_time:
-            return True
+        trading_time: Set[time] = settings.get("tradingtime.night")
+        for i in range(0, len(trading_time), 2):
+            if trading_time[i] <= current_time <= trading_time[i+1]:
+                return True
         return False
 
     @staticmethod
-    def filter_am_symbol(vt_symbols: Set[str]) -> Set[str]:
+    def is_underlying_symbol_trading_time(underlying_symbol: str, time: time) -> bool:
+        for underlying_symbols, trading_time in settings.get("symbol.tradingtime").items():
+            if underlying_symbol in underlying_symbols:
+                for i in range(0, len(trading_time), 2):
+                    if trading_time[i] <= time <= trading_time[i+1]:
+                        return True
+                return False
+
+    @staticmethod
+    def filter_day_symbol(vt_symbols: Set[str]) -> Set[str]:
         return {vt_symbol for vt_symbol in vt_symbols if re.match("[^0-9]*", vt_symbol, re.I).group().upper() not in settings.get("symbol.day")}
     
     @staticmethod
-    def filer_pm_symbol(vt_symbols: Set[str]) -> Set[str]:
+    def filer_night_symbol(vt_symbols: Set[str]) -> Set[str]:
         return {vt_symbol for vt_symbol in vt_symbols if re.match("[^0-9]*", vt_symbol, re.I).group().upper() in settings.get("symbol.day")}
 
     def add_engine(self, engine_class: Any, **kw) -> "BaseEngine":
@@ -342,107 +355,107 @@ class BaseEngine(ABC):
         pass
 
 
-class DataEngine(BaseEngine):
-    def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
-        super().__init__(main_engine, event_engine)
+# class DataEngine(BaseEngine):
+#     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
+#         super().__init__(main_engine, event_engine)
 
-        self.datas: Dict[str, pandas.DataFrame]  = {}
+#         self.datas: Dict[str, pandas.DataFrame]  = {}
         
-        self.load_file_paths: Dict[str, str] = {}
-        self.backup_file_paths: Dict[str, str] = {}
+#         self.load_file_paths: Dict[str, str] = {}
+#         self.backup_file_paths: Dict[str, str] = {}
 
-        self._add_load_dir_path()
-        self._add_backup_dir_path()
+#         self._add_load_dir_path()
+#         self._add_backup_dir_path()
     
 
-    def _add_load_dir_path(self) -> None:
-        try:
-            self.load_dir_path = pathlib.Path(FILE_SETTING.get("LOAD_DIR_PATH"))
-            if not self.load_dir_path.exists():
-                self.load_dir_path.mkdir()
-        except:
-            self.main_engine.log("Order directory path cause error", level=logging.ERROR)
+#     def _add_load_dir_path(self) -> None:
+#         try:
+#             self.load_dir_path = pathlib.Path(FILE_SETTING.get("LOAD_DIR_PATH"))
+#             if not self.load_dir_path.exists():
+#                 self.load_dir_path.mkdir()
+#         except:
+#             self.main_engine.log("Order directory path cause error", level=logging.ERROR)
 
-    def _add_backup_dir_path(self) -> None:
-        try:
-            self.backup_dir_path = pathlib.Path(FILE_SETTING.get("BACKUP_DIR_PATH"))
-            if not self.backup_dir_path.exists():
-                self.backup_dir_path.mkdir()
-        except:
-            self.main_engine.log("Backup directory path cause error", level=logging.ERROR)
+#     def _add_backup_dir_path(self) -> None:
+#         try:
+#             self.backup_dir_path = pathlib.Path(FILE_SETTING.get("BACKUP_DIR_PATH"))
+#             if not self.backup_dir_path.exists():
+#                 self.backup_dir_path.mkdir()
+#         except:
+#             self.main_engine.log("Backup directory path cause error", level=logging.ERROR)
 
-    def get_load_dir_path(self) -> pathlib.Path:
-        return self.load_dir_path
+#     def get_load_dir_path(self) -> pathlib.Path:
+#         return self.load_dir_path
 
-    def get_backup_dir_path(self) -> pathlib.Path:
-        return self.backup_dir_path
+#     def get_backup_dir_path(self) -> pathlib.Path:
+#         return self.backup_dir_path
     
-    def add_load_file_path(self, gateway_name: str, file_name: str) -> pathlib.Path:
-        load_file_path: pathlib.Path = self.load_dir_path.joinpath(file_name)
-        self.load_file_paths[gateway_name] = load_file_path
-        return load_file_path
+#     def add_load_file_path(self, gateway_name: str, file_name: str) -> pathlib.Path:
+#         load_file_path: pathlib.Path = self.load_dir_path.joinpath(file_name)
+#         self.load_file_paths[gateway_name] = load_file_path
+#         return load_file_path
 
-    def get_load_file_path(self, gateway_name: str) -> Optional[pathlib.Path]:
-        return self.load_file_paths.get(gateway_name)
+#     def get_load_file_path(self, gateway_name: str) -> Optional[pathlib.Path]:
+#         return self.load_file_paths.get(gateway_name)
 
-    def delete_load_file(self, gateway_name: str) -> None:
-        file_path: Optional[pathlib.Path] = self.get_load_file_path(gateway_name)
-        if file_path.exists():
-            file_path.unlink()
+#     def delete_load_file(self, gateway_name: str) -> None:
+#         file_path: Optional[pathlib.Path] = self.get_load_file_path(gateway_name)
+#         if file_path.exists():
+#             file_path.unlink()
 
-    def add_backup_file_path(self, gateway_name: str, file_name: str) -> pathlib.Path:
-        backup_file_path: pathlib.Path = self.backup_dir_path.joinpath(file_name)
-        self.backup_file_paths[gateway_name] = backup_file_path
-        return backup_file_path
+#     def add_backup_file_path(self, gateway_name: str, file_name: str) -> pathlib.Path:
+#         backup_file_path: pathlib.Path = self.backup_dir_path.joinpath(file_name)
+#         self.backup_file_paths[gateway_name] = backup_file_path
+#         return backup_file_path
     
-    def get_backup_file_path(self, gateway_name: str) -> Optional[pathlib.Path]:
-        return self.backup_file_paths.get(gateway_name)
+#     def get_backup_file_path(self, gateway_name: str) -> Optional[pathlib.Path]:
+#         return self.backup_file_paths.get(gateway_name)
 
-    def delete_backup_file(self, gateway_name: str) -> None:
-        file_path: Optional[pathlib.Path] = self.get_backup_file_path(gateway_name)
-        if file_path.exists():
-            file_path.unlink()
+#     def delete_backup_file(self, gateway_name: str) -> None:
+#         file_path: Optional[pathlib.Path] = self.get_backup_file_path(gateway_name)
+#         if file_path.exists():
+#             file_path.unlink()
 
-    def add_data(self, gateway_name: str, data: pandas.DataFrame) -> None:
-        self.datas[gateway_name] = data
+#     def add_data(self, gateway_name: str, data: pandas.DataFrame) -> None:
+#         self.datas[gateway_name] = data
 
-    def get_data(self, gateway_name: str) -> Optional[pandas.DataFrame]:
-        return self.datas.get(gateway_name)
+#     def get_data(self, gateway_name: str) -> Optional[pandas.DataFrame]:
+#         return self.datas.get(gateway_name)
 
-    def load_data(self, gateway_name: str, file_name: str, cache: bool = False) -> Optional[pandas.DataFrame]:
-        try:
-            file_path: pathlib.Path = self.add_backup_file_path(gateway_name, f"{file_name}_backup.csv")
-            if not file_path.exists():
-                file_path: pathlib.Path = self.add_load_file_path(gateway_name, file_name)
-                if not file_path.exists():
-                    self.main_engine.log("Load file path does not exist", gateway_name)
-                    return
-        except:
-            self.main_engine.log("Backup or load file path cause error", gateway_name, logging.ERROR)
-            return
+#     def load_data(self, gateway_name: str, file_name: str, cache: bool = False) -> Optional[pandas.DataFrame]:
+#         try:
+#             file_path: pathlib.Path = self.add_backup_file_path(gateway_name, f"{file_name}_backup.csv")
+#             if not file_path.exists():
+#                 file_path: pathlib.Path = self.add_load_file_path(gateway_name, file_name)
+#                 if not file_path.exists():
+#                     self.main_engine.log("Load file path does not exist", gateway_name)
+#                     return
+#         except:
+#             self.main_engine.log("Backup or load file path cause error", gateway_name, logging.ERROR)
+#             return
 
-        data = pandas.read_csv(file_path)
-        self.add_data(gateway_name, data)
+#         data = pandas.read_csv(file_path)
+#         self.add_data(gateway_name, data)
 
-        if file_path is not self.get_backup_file_path(gateway_name):
-            self.backup_data(gateway_name)
+#         if file_path is not self.get_backup_file_path(gateway_name):
+#             self.backup_data(gateway_name)
 
-        self.main_engine.log("Data loaded", gateway_name)
-        return data
+#         self.main_engine.log("Data loaded", gateway_name)
+#         return data
         
-    def delete_data(self, gateway_name: str) -> None:
-        self.datas.pop(gateway_name, None)
+#     def delete_data(self, gateway_name: str) -> None:
+#         self.datas.pop(gateway_name, None)
 
-    def backup_data(self, gateway_name: str) -> None:
-        data: Optional[pandas.DataFrame] = self.get_data(gateway_name)
-        if data is not None:
-            file_path = self.get_backup_file_path(gateway_name)
-            if file_path:
-                data.to_csv(file_path, index=False)
-            else:
-                self.main_engine.log(f"Backup file path is None", gateway_name)
-        else:
-            self.main_engine.log(f"Backup data is None", gateway_name)
+#     def backup_data(self, gateway_name: str) -> None:
+#         data: Optional[pandas.DataFrame] = self.get_data(gateway_name)
+#         if data is not None:
+#             file_path = self.get_backup_file_path(gateway_name)
+#             if file_path:
+#                 data.to_csv(file_path, index=False)
+#             else:
+#                 self.main_engine.log(f"Backup file path is None", gateway_name)
+#         else:
+#             self.main_engine.log(f"Backup data is None", gateway_name)
 
 
 class LogEngine(BaseEngine):
@@ -497,11 +510,13 @@ class LogEngine(BaseEngine):
 
 
 class BarEngine(BaseEngine):
-    def __init__(self, main_engine: MainEngine, event_engine: EventEngine, period: int = 1, size: int = 1, is_persistence: bool = False) -> None:
+    def __init__(self, main_engine: MainEngine, event_engine: EventEngine, period: int = 1, size: int = 1, is_persistence: bool = False, collection_name:str ="") -> None:
         super().__init__(main_engine, event_engine)
         self.bar_generator_period: int = period
         self.array_manager_size: int = size
+
         self.is_persistance: bool = is_persistence
+        self.collection_name: str = collection_name
 
         self.bar_generator = BarGenerator(self.bar_generator_period)
         self.array_manager = ArrayManager(self.array_manager_size)
@@ -513,19 +528,24 @@ class BarEngine(BaseEngine):
         self.event_engine.register(EVENT_TICK, self.process_tick_event)
 
     def process_tick_event(self, event: Event) -> None:
-        tick: TickData = event.data
-        self.bar_generator.update_tick(tick, self.process_bar_event)
+        tick: TickData = self.filter_tick_event(event.data) 
+        if tick:
+            self.bar_generator.update_tick(tick, self.process_bar_event)
+
+    def filter_tick_event(self, tick: TickData) -> Optional[TickData]:
+        underlying_symbol = re.match("\D*", tick.symbol).group()
+        time = tick.datetime.time()
+        if MainEngine.is_underlying_symbol_trading_time(underlying_symbol, time):
+            return tick
 
     def process_bar_event(self, bar: BarData) -> None:
         self.array_manager.udpate_bar(bar)
         print(bar)
         if self.is_persistance:
-            if bar.date.time().hour >= 20:
-                collection_name = (bar.date + timedelta(days=1)).date().strftime("%Y%m%d")
-            else:
-                collection_name = bar.date.date().strftime("%Y%m%d")
-
-            self.database.insert_bar_data([bar], collection_name)
+            self.persit_bar_data(bar)
+    
+    def persit_bar_data(self, bar: BarData) -> bool:
+        return self.database.insert_bar_data([bar], self.collection_name)
 
     def close(self):
         self.database.client.close()

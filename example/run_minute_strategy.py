@@ -1,10 +1,12 @@
+from ast import While
 import re
 
 from jqdatasdk import is_auth, auth, get_dominant_future
 
-from typing import Dict, Set
+from typing import Dict, Set, Tuple
 
 from base.engine import BarEngine, MainEngine
+from base.setting import settings
 from vnpy.trader.constant import Product, Exchange
 from vnpy_ctp import CtpGateway
 
@@ -41,7 +43,7 @@ def connect_jq() -> None:
 def subscribe(main_engine: MainEngine, gateway_name: str = None) -> None:
     connect_jq()
 
-    underlying_symbols: Dict[str, Exchange] = {}
+    underlying_symbols: Tuple[str] = ()
     dominant_vt_symbols: Set[str] = set()
 
     contracts = main_engine.get_all_contracts()
@@ -68,19 +70,32 @@ def subscribe(main_engine: MainEngine, gateway_name: str = None) -> None:
     
     main_engine.subscribe(dominant_vt_symbols, gateway_name)
 
+
+def run_parent():
+    pass
+
+def run_child():
+    pass
+
 if __name__ == "__main__":
+    is_tradeing: bool = False
+
     main_engine = MainEngine()
-    bar_engine: BarEngine = main_engine.add_engine(BarEngine, period = 1, size = 1, is_persistence = False)
+    bar_engine: BarEngine = main_engine.add_engine(BarEngine, period = 1, size = 1, is_persistence = False, collection_name = "")
+    
+    while True:
+        if MainEngine.is_trading_time():
+            is_tradeing = True
+        else:
+            is_tradeing = False
+        
+        if is_tradeing:
+            
 
-    main_engine.connect(configs.get("accounts"))
-    subscribe(main_engine)
+            main_engine.connect(configs.get("accounts"))
+            subscribe(main_engine)
 
-
-    # main_engine.subscribe({"rb2210.SHFE"})
-    # while True:
-    #     tick = main_engine.get_tick("rb2210.SHFE")
-    #     if tick:
-    #         break
+        
 
 
     # print(tick)
