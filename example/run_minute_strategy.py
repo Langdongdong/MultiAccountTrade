@@ -1,5 +1,6 @@
 from ast import While
 import re
+from time import sleep
 
 from jqdatasdk import is_auth, auth, get_dominant_future
 
@@ -17,8 +18,8 @@ configs = {
             "用户名": "083231",
             "密码": "wodenvshen199!",
             "经纪商代码": "9999",
-            "交易服务器": "180.168.146.187:10130",
-            "行情服务器": "180.168.146.187:10131",
+            "交易服务器": "180.168.146.187:10201",
+            "行情服务器": "180.168.146.187:10211",
             "产品名称": "simnow_client_test",
             "授权编码": "0000000000000000",
             "gateway": CtpGateway
@@ -43,7 +44,7 @@ def connect_jq() -> None:
 def subscribe(main_engine: MainEngine, gateway_name: str = None) -> None:
     connect_jq()
 
-    underlying_symbols: Tuple[str] = ()
+    underlying_symbols: Dict[str, str] = {}
     dominant_vt_symbols: Set[str] = set()
 
     contracts = main_engine.get_all_contracts()
@@ -74,10 +75,21 @@ def subscribe(main_engine: MainEngine, gateway_name: str = None) -> None:
 if __name__ == "__main__":
 
     main_engine = MainEngine()
+
+    while True:
+        if MainEngine.is_trading_time():
+            break
+        sleep(30)
+
     bar_engine: BarEngine = main_engine.add_engine(BarEngine, period = 1, size = 1, is_persistence = True)
 
     main_engine.connect(configs.get("accounts"))
+
     subscribe(main_engine)
 
-    # print(tick)
-    # main_engine.close()
+    while True:
+        if not MainEngine.is_trading_time():
+            break
+        
+    main_engine.close()
+    

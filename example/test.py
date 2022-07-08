@@ -1,4 +1,7 @@
 from datetime import datetime, time
+
+from pymongo import MongoClient
+from base.database import MongoDatabase
 from base.setting import settings
 import re
 
@@ -8,5 +11,8 @@ if __name__ == "__main__":
     #     a.add(i)
 
     # a = set(a)
-    print(re.match("\D*", "RT22").group())
-    print(datetime.now().time() < time(9,0))
+    mongo = MongoDatabase()
+    data = mongo.load_bar_data("rb2210", "20220708")
+    for i in data:
+        print(i)
+    print(len(data))

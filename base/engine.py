@@ -3,7 +3,7 @@ import logging, pathlib, pandas, re
 from abc import ABC
 from datetime import datetime, time, timedelta
 from copy import copy
-from typing import Any, Dict, List, Optional, Set, Type
+from typing import Any, Dict, List, Optional, Sequence, Set, Type
 
 from base.database import MongoDatabase
 
@@ -74,7 +74,7 @@ class MainEngine():
     
     @staticmethod
     def is_trading_time() -> bool:
-        if MainEngine.is_day_trading_time or MainEngine.is_night_trading_time:
+        if MainEngine.is_day_trading_time() or MainEngine.is_night_trading_time():
             return True
         return False
 
@@ -131,7 +131,7 @@ class MainEngine():
             if not not_inited_gateway_names:
                 break
         
-    def subscribe(self, vt_symbols: Set[str], gateway_name: str = None) -> None:
+    def subscribe(self, vt_symbols: Sequence[str], gateway_name: str = None) -> None:
         if not gateway_name:
             gateway_name = self.get_all_gateway_names()[0]
         gateway: Optional[BaseGateway] = self.get_gateway(gateway_name)
@@ -462,41 +462,45 @@ class LogEngine(BaseEngine):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
         super().__init__(main_engine, event_engine)
 
-        self.logger: logging.Logger = logging.getLogger("MainEngine")
-        self.formatter: logging.Formatter = logging.Formatter("%(asctime)s  %(levelname)s: %(message)s")
-        self.logger.setLevel(logging.INFO)
+        if not settings.get("log.active"):
+            return
         
-        self.add_log_dir_path()
+        self.level = settings.get("log.level")
+        
+        self.logger: logging.Logger = logging.getLogger("MainEngine")
+        self.logger.setLevel(self.level)
 
-        self.add_file_handler()
-        self.add_console_handler()
+        self.formatter: logging.Formatter = logging.Formatter("%(asctime)s  %(levelname)s: %(message)s")
+        
+        if settings.get("log.console"):
+            self.add_console_handler()
+        
+        if settings.get("log.file"):
+            self.add_file_handler()
 
         self.register_log_event()
-    
-    def add_log_dir_path(self) -> None:
-        try:
-            self.log_dir_path: pathlib.Path = pathlib.Path(settings.get("log.dir"))
-            if not self.log_dir_path.exists():
-                self.log_dir_path.mkdir()
-        except:
-            self.main_engine.log("Log directory path cause error.", level=logging.ERROR)
 
     def add_file_handler(self) -> None:
         file_name: str = f"{datetime.now().strftime('%Y%m%d')}.log"
-        file_path: pathlib.Path = self.log_dir_path.joinpath(file_name)
 
         try:
-            file_handler: logging.FileHandler = logging.FileHandler(file_path, mode="a", encoding="utf-8")
-            file_handler.setLevel(logging.INFO)
-            file_handler.setFormatter(self.formatter)
-            self.logger.addHandler(file_handler)
-        except:
-            self.main_engine.log("Log file path cause error", level=logging.ERROR)
+            dir_path: pathlib.Path = pathlib.Path(settings.get("log.dir"))
+            if not dir_path.exists():
+                dir_path.mkdir()
 
+            file_path: pathlib.Path = dir_path.joinpath(file_name)
+            file_handler: logging.FileHandler = logging.FileHandler(file_path, mode="a", encoding="utf-8")
+            file_handler.setLevel(self.level)
+            file_handler.setFormatter(self.formatter)
+
+            self.logger.addHandler(file_handler)
+
+        except Exception as e:
+            self.main_engine.log(e, level=logging.ERROR)
 
     def add_console_handler(self) -> None:
         console_handler: logging.StreamHandler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
+        console_handler.setLevel(self.level)
         console_handler.setFormatter(self.formatter)
 
         self.logger.addHandler(console_handler)
@@ -527,7 +531,8 @@ class BarEngine(BaseEngine):
         self.event_engine.register(EVENT_TICK, self.process_tick_event)
 
     def process_tick_event(self, event: Event) -> None:
-        tick: TickData = self.filter_tick_event(event.data) 
+        # tick: TickData = self.filter_tick_event(event.data) 
+        tick: TickData = event.data
         if tick:
             self.bar_generator.update_tick(tick, self.process_bar_event)
 
@@ -539,7 +544,6 @@ class BarEngine(BaseEngine):
 
     def process_bar_event(self, bar: BarData) -> None:
         self.array_manager.udpate_bar(bar)
-        print(bar)
         if self.is_persistance:
             self.persit_bar_data(bar)
     

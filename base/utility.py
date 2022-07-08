@@ -38,10 +38,31 @@ class BarGenerator:
         self.period_counts: Dict[str, int] = {}
 
     def update_tick(self, tick: TickData, on_bar: Callable) -> Optional[BarData]:
-        bar: BarData = self.bars.get(tick.vt_symbol)
         last_tick: TickData = self.last_ticks.get(tick.vt_symbol)
+
+        if not tick.last_price:
+             return 
+
+        if last_tick and tick.datetime < last_tick.datetime:
+            return
+
+        bar: BarData = self.bars.get(tick.vt_symbol)
         period_count: int = self.period_counts.get(tick.vt_symbol, 0)
         
+        if bar and bar.date.minute != tick.datetime.minute:
+            period_count += 1
+            if self.period == period_count:
+                period_count = 0
+
+                bar.date = bar.date.replace(second=0, microsecond=0)
+                for k, v in bar.__dict__.items():
+                    if type(v) == float:
+                        setattr(bar, k, float(Decimal.from_float(v).quantize(Decimal('0.00'))))
+                        
+                on_bar(self.bars.pop(tick.vt_symbol))
+                
+            self.period_counts[tick.vt_symbol] = period_count
+                
         if not bar:
             self.bars[tick.vt_symbol] = BarData(
                 symbol = tick.symbol,
@@ -56,33 +77,22 @@ class BarGenerator:
                 open_interest = tick.open_interest,
                 date = tick.datetime
             )
-
         else:
             bar.date = tick.datetime
             bar.close = tick.last_price
             bar.open_interest = tick.open_interest
 
-            bar.high = max(tick.high_price, bar.high)
-            bar.low = min(tick.low_price, bar.low)
+            bar.high = max(tick.last_price, bar.high)
+            if tick.high_price > last_tick.high_price:
+                bar.high = max(tick.high_price, bar.high)
 
-            if last_tick:
-                bar.volume += max(tick.volume - last_tick.volume, 0)
-                bar.money += max(tick.turnover - last_tick.turnover, 0)
+            bar.low = min(tick.last_price, bar.low)
+            if tick.low_price < last_tick.low_price:
+                bar.low = min(tick.low_price, bar.low)
 
-            if bar.date.minute != last_tick.datetime.minute:
-                period_count += 1
-                
-                if self.period == period_count:
-                    period_count = 0
-
-                    bar.date = bar.date.replace(second=0, microsecond=0)
-                    for k, v in bar.__dict__.items():
-                        if type(v) == float:
-                            setattr(bar, k, float(Decimal.from_float(v).quantize(Decimal('0.00'))))
-                            
-                    on_bar(self.bars.pop(tick.vt_symbol))
-                    
-                self.period_counts[tick.vt_symbol] = period_count
+        if last_tick:
+            bar.volume += max(tick.volume - last_tick.volume, 0)
+            bar.money += max(tick.turnover - last_tick.turnover, 0)
 
         self.last_ticks[tick.vt_symbol] = tick
 
