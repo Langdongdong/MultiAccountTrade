@@ -51,20 +51,22 @@ class BarGenerator:
         
         if bar and bar.date.minute != tick.datetime.minute:
             period_count += 1
-            if self.period == period_count:
-                period_count = 0
 
+            if self.period == period_count:
                 bar.date = bar.date.replace(second=0, microsecond=0)
                 for k, v in bar.__dict__.items():
                     if type(v) == float:
                         setattr(bar, k, float(Decimal.from_float(v).quantize(Decimal('0.00'))))
-                        
-                on_bar(self.bars.pop(tick.vt_symbol))
+
+                on_bar(bar)
+                bar = None
+
+                period_count = 0
                 
             self.period_counts[tick.vt_symbol] = period_count
                 
         if not bar:
-            self.bars[tick.vt_symbol] = BarData(
+            bar = BarData(
                 symbol = tick.symbol,
                 open = tick.last_price,
                 close = tick.last_price,
@@ -77,6 +79,7 @@ class BarGenerator:
                 open_interest = tick.open_interest,
                 date = tick.datetime
             )
+            self.bars[tick.vt_symbol] = bar
         else:
             bar.date = tick.datetime
             bar.close = tick.last_price
