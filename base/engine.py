@@ -514,18 +514,23 @@ class LogEngine(BaseEngine):
 
 
 class BarEngine(BaseEngine):
-    def __init__(self, main_engine: MainEngine, event_engine: EventEngine, period: int = 1, size: int = 1, is_persistence: bool = False) -> None:
+    def __init__(self, main_engine: MainEngine, event_engine: EventEngine, period: int = 1, size: int = 0, is_persistence: bool = False) -> None:
         super().__init__(main_engine, event_engine)
-        self.bar_generator_period: int = period
-        self.array_manager_size: int = size
         
-        self.is_persistance: bool = is_persistence
+        self.bar_generator = None
+        self.array_manager = None
+        self.database = None
 
-        self.bar_generator = BarGenerator(self.bar_generator_period)
-        self.array_manager = ArrayManager(self.array_manager_size)
-        self.database = MongoDatabase()
+        if period:
+            self.bar_generator = BarGenerator(period)
+            self.register_tick_process()
+        
+        if size:
+            self.array_manager = ArrayManager(size)
 
-        self.register_tick_process()
+        if is_persistence:
+            self.database = MongoDatabase()
+
 
     def register_tick_process(self) -> None:
         self.event_engine.register(EVENT_TICK, self.process_tick_event)
@@ -543,8 +548,10 @@ class BarEngine(BaseEngine):
             return tick
 
     def process_bar_event(self, bar: BarData) -> None:
-        self.array_manager.udpate_bar(bar)
-        if self.is_persistance:
+        if self.array_manager:
+            self.array_manager.udpate_bar(bar)
+
+        if self.database:
             self.persit_bar_data(bar)
     
     def persit_bar_data(self, bar: BarData) -> bool:

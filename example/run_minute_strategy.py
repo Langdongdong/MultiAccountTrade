@@ -81,7 +81,7 @@ if __name__ == "__main__":
             break
         sleep(30)
 
-    bar_engine: BarEngine = main_engine.add_engine(BarEngine, period = 1, size = 1, is_persistence = True)
+    bar_engine: BarEngine = main_engine.add_engine(BarEngine, is_persistence = True)
 
     main_engine.connect(configs.get("accounts"))
 
