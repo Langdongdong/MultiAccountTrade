@@ -26,6 +26,8 @@ def get_df(data: Any, use_df: bool = False) -> Optional[BaseData]:
             data = [data]
         return to_df(data)
 
+# def read_csv
+
 class BarGenerator:
     """
     Only generate minute bar.

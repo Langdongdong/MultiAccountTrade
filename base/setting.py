@@ -7,8 +7,8 @@ settings: Dict[str, Any] = {
     "log.active": True,
     "log.level": logging.INFO,
     "log.console": True,
-    "log.file": False,
-    "log.dir": "Z:/log/",
+    "log.file": True,
+    "log.dir": "E:/log/",
 
 
     "symbol.day": {"SM", "SF", "WH", "JR", "LR", "PM", "RI", "RS", "PK", "UR", "CJ", "AP", "bb", "fb", "lh", "jd", "wr", "IF", "IC", "IH", "T", "TF", "TS"},
