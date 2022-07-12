@@ -74,7 +74,6 @@ class BarGenerator:
                 open = tick.last_price,
                 high = tick.last_price,
                 low = tick.last_price,
-                # avg = None,
                 high_limit = tick.limit_up,
                 low_limit = tick.limit_down,
                 pre_close = tick.pre_close,
