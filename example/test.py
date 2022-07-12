@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 
 from pymongo import MongoClient
 from base.database import MongoDatabase
@@ -24,11 +24,15 @@ class Test():
 
 if __name__ == "__main__":
     
-    mongo = MongoDatabase()
-    data = mongo.load_bar_data("zn2208", "20220712")
-    for i in data:
-        print(i)
-    print(len(data))
+    # mongo = MongoDatabase()
+    # data = mongo.load_bar_data("zn2208", "20220712")
+    # for i in data:
+    #     print(i)
+    # print(len(data))
+
+
+    print(datetime.now() + timedelta(minutes=10))
+
     # test = Test()
     # test.fun2()
     # d = {"test": test}
