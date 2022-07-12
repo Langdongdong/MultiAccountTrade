@@ -55,6 +55,7 @@ class BarGenerator:
             period_count += 1
 
             if self.period == period_count:
+                bar.date = tick.datetime
                 bar.date = bar.date.replace(second=0, microsecond=0)
                 for k, v in bar.__dict__.items():
                     if type(v) == float:
@@ -71,22 +72,15 @@ class BarGenerator:
             bar = BarData(
                 symbol = tick.symbol,
                 open = tick.last_price,
-                close = tick.last_price,
                 high = tick.last_price,
                 low = tick.last_price,
-                avg = None,
+                # avg = None,
                 high_limit = tick.limit_up,
                 low_limit = tick.limit_down,
                 pre_close = tick.pre_close,
-                open_interest = tick.open_interest,
-                date = tick.datetime
             )
             self.bars[tick.vt_symbol] = bar
         else:
-            bar.date = tick.datetime
-            bar.close = tick.last_price
-            bar.open_interest = tick.open_interest
-
             bar.high = max(tick.last_price, bar.high)
             if tick.high_price > last_tick.high_price:
                 bar.high = max(tick.high_price, bar.high)
@@ -94,6 +88,10 @@ class BarGenerator:
             bar.low = min(tick.last_price, bar.low)
             if tick.low_price < last_tick.low_price:
                 bar.low = min(tick.low_price, bar.low)
+        
+        bar.date = tick.datetime
+        bar.close = tick.last_price
+        bar.open_interest = tick.open_interest
 
         if last_tick:
             bar.volume += max(tick.volume - last_tick.volume, 0)

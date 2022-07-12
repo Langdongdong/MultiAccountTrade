@@ -24,12 +24,12 @@ class Test():
 
 if __name__ == "__main__":
     
-    # mongo = MongoDatabase()
-    # data = mongo.load_bar_data("rb2210", "20220708")
-    # for i in data:
-    #     print(i)
-    # print(len(data))
-    test = Test()
+    mongo = MongoDatabase()
+    data = mongo.load_bar_data("zn2208", "20220712")
+    for i in data:
+        print(i)
+    print(len(data))
+    # test = Test()
     # test.fun2()
     # d = {"test": test}
     # print(d.get("test").a)
