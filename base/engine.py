@@ -536,7 +536,7 @@ class BarEngine(BaseEngine):
         self.event_engine.register(EVENT_TICK, self.process_tick_event)
 
     def process_tick_event(self, event: Event) -> None:
-        tick: TickData = self.filter_tick_event(event.data) 
+        # tick: TickData = self.filter_tick_event(event.data) 
         tick: TickData = event.data
         if tick:
             self.bar_generator.update_tick(tick, self.process_bar_event)

@@ -79,7 +79,7 @@ if __name__ == "__main__":
     while True:
         if MainEngine.is_trading_time():
             break
-        sleep(30)
+        sleep(10)
 
     bar_engine: BarEngine = main_engine.add_engine(BarEngine, is_persistence = True)
 
@@ -91,10 +91,12 @@ if __name__ == "__main__":
 
     while True:
         if not MainEngine.is_trading_time():
-            for tick in main_engine.get_all_ticks():
-                for k, v in tick.__dict__.items():
-                    main_engine.log(f"{k}:{v}")
-        sleep(1)
+        #     for tick in main_engine.get_all_ticks():
+        #         for k, v in tick.__dict__.items():
+        #             main_engine.log(f"{k}:{v}")
+        # sleep(1)
+            break
+        sleep(60)
         
     main_engine.close()
     

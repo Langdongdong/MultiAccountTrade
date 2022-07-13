@@ -24,14 +24,14 @@ class Test():
 
 if __name__ == "__main__":
     
-    # mongo = MongoDatabase()
-    # data = mongo.load_bar_data("zn2208", "20220712")
-    # for i in data:
-    #     print(i)
-    # print(len(data))
+    mongo = MongoDatabase()
+    data = mongo.load_bar_data("l2209", "20220712")
+    for i in data:
+        print(i)
+    print(len(data))
 
 
-    print(datetime.now() + timedelta(minutes=10))
+    # print(datetime.now() + timedelta(minutes=10))
 
     # test = Test()
     # test.fun2()
