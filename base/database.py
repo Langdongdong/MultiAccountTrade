@@ -60,7 +60,7 @@ class MongoDatabase():
                 "low": bar.low,
                 "volume": bar.volume,
                 "money": bar.money,
-                # "avg": bar.avg,
+                "avg": bar.avg,
                 "high_limit": bar.high_limit,
                 "low_limit": bar.low_limit,
                 "pre_close": bar.pre_close,

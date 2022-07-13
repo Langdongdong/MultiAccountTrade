@@ -54,7 +54,7 @@ class BarData:
     low: float = 0
     volume: float = 0
     money: float = 0
-    # avg: float = 0
+    avg: float = 0
     high_limit: float = 0
     low_limit: float = 0
     pre_close: float = 0

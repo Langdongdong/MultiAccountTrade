@@ -531,28 +531,28 @@ class BarEngine(BaseEngine):
         if is_persistence:
             self.database = MongoDatabase()
 
-
     def register_tick_process(self) -> None:
         self.event_engine.register(EVENT_TICK, self.process_tick_event)
 
     def process_tick_event(self, event: Event) -> None:
-        # tick: TickData = self.filter_tick_event(event.data) 
         tick: TickData = event.data
         if tick:
             self.bar_generator.update_tick(tick, self.process_bar_event)
 
-    def filter_tick_event(self, tick: TickData) -> Optional[TickData]:
-        underlying_symbol = re.match("\D*", tick.symbol).group()
-        time = tick.datetime.time()
-        if MainEngine.is_underlying_symbol_trading_time(underlying_symbol, time):
-            return tick
-
     def process_bar_event(self, bar: BarData) -> None:
-        if self.array_manager:
-            self.array_manager.udpate_bar(bar)
+        bar = self.filter_bar(bar)
+        if bar:
+            if self.array_manager:
+                self.array_manager.udpate_bar(bar)
 
-        if self.database:
-            self.persit_bar_data(bar)
+            if self.database:
+                self.persit_bar_data(bar)
+
+    def filter_bar(self, bar: BarData) -> Optional[BarData]:
+        underlying_symbol = re.match("\D*", bar.symbol).group()
+        time = bar.date.time()
+        if MainEngine.is_underlying_symbol_trading_time(underlying_symbol, time):
+            return bar
     
     def persit_bar_data(self, bar: BarData) -> bool:
         if bar.date.time().hour >= 20:

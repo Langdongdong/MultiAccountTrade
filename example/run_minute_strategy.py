@@ -10,6 +10,7 @@ from base.engine import BarEngine, MainEngine
 from base.setting import settings
 from vnpy.trader.constant import Product, Exchange
 from vnpy_ctp import CtpGateway
+from vnpy_ctptest import CtptestGateway
 
 
 configs = {
@@ -25,14 +26,14 @@ configs = {
         #     "gateway": CtpGateway
         # },
         "DDTEST2": {
-            "用户名": "91600338",
-            "密码": "dd027232",
-            "经纪商代码": "5040",
-            "交易服务器": "180.169.95.246:21205",
-            "行情服务器": "220.248.39.106:21213",
-            "产品名称": "client_miaowazy_1.0.0",
-            "授权编码": "127WVB6B0IYUWYVK",
-            "gateway": CtpGateway
+            "用户名": "99000072",
+            "密码": "20202020",
+            "经纪商代码": "5060",
+            "交易服务器": "116.236.198.175:33437",
+            "行情服务器": "116.236.198.175:33443",
+            "产品名称": "client_ddtrader_v1.0.0",
+            "授权编码": "ABCDEFGH12345678",
+            "gateway": CtptestGateway
         }
     },
 }
@@ -76,10 +77,10 @@ if __name__ == "__main__":
 
     main_engine = MainEngine()
 
-    while True:
-        if MainEngine.is_trading_time():
-            break
-        sleep(10)
+    # while True:
+    #     if MainEngine.is_trading_time():
+    #         break
+    #     sleep(10)
 
     bar_engine: BarEngine = main_engine.add_engine(BarEngine, is_persistence = True)
 
