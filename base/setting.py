@@ -7,7 +7,7 @@ settings: Dict[str, Any] = {
     "log.active": True,
     "log.level": logging.INFO,
     "log.console": True,
-    "log.file": True,
+    "log.file": False,
     "log.dir": "E:/log/",
 
 

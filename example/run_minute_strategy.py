@@ -8,8 +8,9 @@ from typing import Dict, Set, Tuple
 
 from base.engine import BarEngine, MainEngine
 from base.setting import settings
+from vnpy.event import EventEngine
 from vnpy.trader.constant import Product, Exchange
-from vnpy_ctp import CtpGateway
+# from vnpy_ctp import CtpGateway
 from vnpy_ctptest import CtptestGateway
 
 
@@ -76,28 +77,31 @@ def subscribe(main_engine: MainEngine, gateway_name: str = None) -> None:
 if __name__ == "__main__":
 
     main_engine = MainEngine()
+    # event_engine = EventEngine()
 
     # while True:
     #     if MainEngine.is_trading_time():
     #         break
     #     sleep(10)
 
-    bar_engine: BarEngine = main_engine.add_engine(BarEngine, is_persistence = True)
+    # bar_engine: BarEngine = main_engine.add_engine(BarEngine, is_persistence = True)
 
     main_engine.connect(configs.get("accounts"))
 
-    subscribe(main_engine)
+    ctptest: CtptestGateway = main_engine.get_all_gateways()[0]
+    print(ctptest.td_api.frontid)
+    # subscribe(main_engine)
 
 
 
-    while True:
-        if not MainEngine.is_trading_time():
-        #     for tick in main_engine.get_all_ticks():
-        #         for k, v in tick.__dict__.items():
-        #             main_engine.log(f"{k}:{v}")
-        # sleep(1)
-            break
-        sleep(60)
+    # while True:
+    #     if not MainEngine.is_trading_time():
+    #     #     for tick in main_engine.get_all_ticks():
+    #     #         for k, v in tick.__dict__.items():
+    #     #             main_engine.log(f"{k}:{v}")
+    #     # sleep(1)
+    #         break
+    #     sleep(60)
         
-    main_engine.close()
+    # main_engine.close()
     
