@@ -47,7 +47,12 @@ if __name__ == "__main__":
     # test.a = 122
     # print(d.get("test").a)
 
-    from vnpy_ctp.api import MdApi
-
-    print(dir(MdApi))
-    print(help(MdApi))
+    target = str("{'R1': 6, 'R2': 1.0}")
+    it = re.findall("(?<=')\S*?(?=':)", target)
+    print(it)
+    
+    it2 = re.findall("(?<=: )\S*[^(, )}]", target)
+    print(it2)
+    # print(re.findall(":[ .+]", target))
+    # re.search()
+    # a = test(1,2,3,4)

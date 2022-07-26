@@ -45,7 +45,7 @@ from vnpy.trader.object import (
 """
 class MainEngine():
     """
-    Only use for CTP like api.
+    主引擎
     """
     _instance = None
 
