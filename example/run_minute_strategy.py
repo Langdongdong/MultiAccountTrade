@@ -8,8 +8,9 @@ from typing import Dict, Set, Tuple
 
 from base.engine import BarEngine, MainEngine
 from base.setting import settings
+from vnpy.event import EventEngine
 from vnpy.trader.constant import Product, Exchange
-from vnpy_ctp import CtpGateway
+# from vnpy_ctp import CtpGateway
 from vnpy_ctptest import CtptestGateway
 
 
@@ -86,16 +87,26 @@ def subscribe(main_engine: MainEngine, gateway_name: str = None) -> None:
 if __name__ == "__main__":
 
     main_engine = MainEngine()
+    # event_engine = EventEngine()
 
     # while True:
     #     if MainEngine.is_trading_time():
     #         break
     #     sleep(10)
 
+<<<<<<< HEAD
     # bar_engine: BarEngine = main_engine.add_engine(BarEngine, is_persistence = False)
 
     main_engine.connect(configs.get("accounts"))
 
+=======
+    # bar_engine: BarEngine = main_engine.add_engine(BarEngine, is_persistence = True)
+
+    main_engine.connect(configs.get("accounts"))
+
+    ctptest: CtptestGateway = main_engine.get_all_gateways()[0]
+    print(ctptest.td_api.frontid)
+>>>>>>> 3d8643e8f8de23e7919434485ac580a468df30b1
     # subscribe(main_engine)
 
     # gateway: CtpGateway = main_engine.get_all_gateways()[0]te
@@ -103,8 +114,12 @@ if __name__ == "__main__":
     # print("trading day - ", gateway.td_api.getTradingDay())
     # print("tdapi version - ",gateway.td_api.getApiVersion())
 
+<<<<<<< HEAD
     g = CtptestGateway(main_engine.event_engine, "dd")
     print(g.md_api.getApiVersion())
+=======
+
+>>>>>>> 3d8643e8f8de23e7919434485ac580a468df30b1
     # while True:
     #     if not MainEngine.is_trading_time():
     #     #     for tick in main_engine.get_all_ticks():

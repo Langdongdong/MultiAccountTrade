@@ -16,13 +16,27 @@ if __name__ == "__main__":
     # 'p2209.DCE', 'wr2210.SHFE', 'hc2210.SHFE', 'i2209.DCE', 'jm2209.DCE', 'IF2207.CFFEX', 'IC2207.CFFEX', 'PF210.CZCE', 'lu2210.INE', 
     # 'OI209.CZCE', 'RS209.CZCE', 'TS2209.CFFEX', 'ZC209.CZCE', 'rb2210.SHFE', 'PK210.CZCE', 'CY209.CZCE', 'al2208.SHFE', 'fu2209.SHFE', 
     # 'MA209.CZCE', 'LR207.CZCE', 'RI207.CZCE', 'au2212.SHFE', 'pb2208.SHFE', 'ss2208.SHFE'
-    mongo = MongoDatabase()
-    data = mongo.load_bar_data("nr2209", "20220713")
-    for i in data: 
-        print(i)
-    print(len(data))
+    # mongo = MongoDatabase()
+    # data = mongo.load_bar_data("nr2209", "20220713")
+    # for i in data: 
+    #     print(i)
+    # print(len(data))
 
 
     # print(datetime.now() + timedelta(minutes=10))
 
+<<<<<<< HEAD
     
+=======
+    # test = Test()
+    # test.fun2()
+    # d = {"test": test}
+    # print(d.get("test").a)
+    # test.a = 122
+    # print(d.get("test").a)
+
+    from vnpy_ctp.api import MdApi
+
+    print(dir(MdApi))
+    print(help(MdApi))
+>>>>>>> 3d8643e8f8de23e7919434485ac580a468df30b1
