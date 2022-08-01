@@ -5,22 +5,7 @@ from pymongo import MongoClient
 from base.database import MongoDatabase
 from base.setting import settings
 import re
-@dataclass
-class Test():
-    b:str
-    def __init__(self) -> None:
-        self.a = 1
 
-        if self.a>11:
-            self.b = 12
-
-    def fun(self):
-        if self.a:
-            print(self.a)
-
-    def fun2(self):
-        if self.b:
-            print(self.b)
 
 if __name__ == "__main__":
     # 'RM301.CZCE', 'eg2209.DCE', 'FG209.CZCE', 'bb2207.DCE', 'pp2209.DCE', 'WH303.CZCE', 'y2209.DCE', 'SA209.CZCE', 'nr2209.INE', 
@@ -40,6 +25,9 @@ if __name__ == "__main__":
 
     # print(datetime.now() + timedelta(minutes=10))
 
+<<<<<<< HEAD
+    
+=======
     # test = Test()
     # test.fun2()
     # d = {"test": test}
@@ -47,6 +35,7 @@ if __name__ == "__main__":
     # test.a = 122
     # print(d.get("test").a)
 
+<<<<<<< HEAD
     target = str("{'R1': 6, 'R2': 1.0}")
     it = re.findall("(?<=')\S*?(?=':)", target)
     print(it)
@@ -56,3 +45,10 @@ if __name__ == "__main__":
     # print(re.findall(":[ .+]", target))
     # re.search()
     # a = test(1,2,3,4)
+=======
+    from vnpy_ctp.api import MdApi
+
+    print(dir(MdApi))
+    print(help(MdApi))
+>>>>>>> 3d8643e8f8de23e7919434485ac580a468df30b1
+>>>>>>> 4cb8f7851470bf3cd71a9e30f9f5dd8eeb001394
