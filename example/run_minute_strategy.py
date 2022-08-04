@@ -10,22 +10,22 @@ from base.engine import BarEngine, MainEngine
 from base.setting import settings
 from vnpy.event import EventEngine
 from vnpy.trader.constant import Product, Exchange
-# from vnpy_ctp import CtpGateway
+from vnpy_ctp import CtpGateway
 from vnpy_ctptest import CtptestGateway
 
 
 configs = {
     "accounts": {
-        # "DDTEST0": {
-        #     "用户名": "20177599",
-        #     "密码": "19910703",
-        #     "经纪商代码": "8080",
-        #     "交易服务器": "27.115.78.182:41206",
-        #     "行情服务器": "27.115.78.182:41214",
-        #     "产品名称": "client_gwqtrader_v1.0.0",
-        #     "授权编码": "L8WN410RZ28OJM3X",
-        #     "gateway": CtpGateway
-        # },
+        "DDTEST0": {
+            "用户名": "20177599",
+            "密码": "19910703",
+            "经纪商代码": "8080",
+            "交易服务器": "27.115.78.182:41206",
+            "行情服务器": "27.115.78.182:41214",
+            "产品名称": "client_gwqtrader_v1.0.0",
+            "授权编码": "L8WN410RZ28OJM3X",
+            "gateway": CtpGateway
+        },
         # "DDTEST1": {
         #     "用户名": "91600338",
         #     "密码": "dd027232",
@@ -94,19 +94,19 @@ if __name__ == "__main__":
     #         break
     #     sleep(10)
 
-    # bar_engine: BarEngine = main_engine.add_engine(BarEngine, is_persistence = False)
+    bar_engine: BarEngine = main_engine.add_engine(BarEngine, is_persistence = False)
 
     main_engine.connect(configs.get("accounts"))
 
-    # subscribe(main_engine)
+    subscribe(main_engine)
 
     # gateway: CtpGateway = main_engine.get_all_gateways()[0]te
     # print("mdapi version - ",gateway.md_api.getApiVersion())
     # print("trading day - ", gateway.td_api.getTradingDay())
     # print("tdapi version - ",gateway.td_api.getApiVersion())
 
-    g = CtptestGateway(main_engine.event_engine, "dd")
-    print(g.md_api.getApiVersion())
+    # g = CtptestGateway(main_engine.event_engine, "dd")
+    # print(g.md_api.getApiVersion())
     # while True:
     #     if not MainEngine.is_trading_time():
     #     #     for tick in main_engine.get_all_ticks():

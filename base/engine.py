@@ -546,15 +546,16 @@ class BarEngine(BaseEngine):
                 self.array_manager.udpate_bar(bar)
 
             if self.database:
-                self.persit_bar_data(bar)
+                self.persist_bar_data(bar)
 
     def filter_bar(self, bar: BarData) -> Optional[BarData]:
         underlying_symbol = re.match("\D*", bar.symbol).group()
         time = bar.date.time()
         if MainEngine.is_underlying_symbol_trading_time(underlying_symbol, time):
+            print(bar)
             return bar
     
-    def persit_bar_data(self, bar: BarData) -> bool:
+    def persist_bar_data(self, bar: BarData) -> bool:
         if bar.date.time().hour >= 20:
                 collection_name = (bar.date + timedelta(days=1)).date().strftime("%Y%m%d")
         else:
