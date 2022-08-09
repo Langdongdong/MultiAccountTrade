@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional, Sequence, Set, Type
 
 from base.database import MongoDatabase
 
-from .utility import ArrayManager, BarGenerator, get_df
+from .utility import ArrayManager, BarGenerator, get_df, to_df
 from .setting import settings
 from .object import BarData
 
@@ -40,9 +40,11 @@ from vnpy.trader.object import (
     SubscribeRequest,
 )
 
-"""
-####################### Change PositionData Struct ######################
-"""
+# -------------------------------------------------------------
+# modify position, contract data struct
+# modify CtpGateway onRtnInstrumentStauts
+# -------------------------------------------------------------
+
 class MainEngine():
     """
     主引擎
@@ -71,7 +73,9 @@ class MainEngine():
 
         self.add_engine(LogEngine)
         self.register_process_event()
-    
+
+        self.df = pandas.DataFrame()
+
     @staticmethod
     def is_trading_time() -> bool:
         if MainEngine.is_day_trading_time() or MainEngine.is_night_trading_time():
@@ -92,7 +96,7 @@ class MainEngine():
         current_time = datetime.now().time()
         trading_time: Set[time] = settings.get("tradingtime.night")
         for i in range(0, len(trading_time), 2):
-            if trading_time[i] <= current_time <= trading_time[i+1]:
+            if trading_time[i] <= current_time or current_time <= trading_time[i+1]:
                 return True
         return False
 
@@ -213,6 +217,9 @@ class MainEngine():
     def process_tick_event(self, event: Event) -> None:
         tick: TickData = event.data
         self.ticks[tick.vt_symbol] = tick
+
+        self.df = pandas.concat([self.df, get_df(tick, True)], ignore_index=True)
+        self.df.to_csv("C:/Users/33292/Desktop/test.csv")
 
     def process_order_event(self, event: Event) -> None:
         order: OrderData = event.data

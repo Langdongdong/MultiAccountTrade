@@ -1,4 +1,6 @@
-from ast import While
+import sys
+sys.path.append(".")
+
 import re
 from time import sleep
 
@@ -11,7 +13,6 @@ from base.setting import settings
 from vnpy.event import EventEngine
 from vnpy.trader.constant import Product, Exchange
 from vnpy_ctp import CtpGateway
-from vnpy_ctptest import CtptestGateway
 
 
 configs = {
@@ -80,6 +81,11 @@ def subscribe(main_engine: MainEngine, gateway_name: str = None) -> None:
         dominant_vt_symbols.add(dominant_vt_symbol)
 
     print(f"Subscribe {len(dominant_vt_symbols)} {dominant_vt_symbols}")
+
+    n = 0
+    for i in dominant_vt_symbols:
+        n+=1
+        print(n, main_engine.get_contract(i))
     
     main_engine.subscribe(dominant_vt_symbols, gateway_name)
 
@@ -94,11 +100,19 @@ if __name__ == "__main__":
     #         break
     #     sleep(10)
 
-    bar_engine: BarEngine = main_engine.add_engine(BarEngine, is_persistence = False)
+    # bar_engine: BarEngine = main_engine.add_engine(BarEngine, is_persistence = False)
 
     main_engine.connect(configs.get("accounts"))
 
-    subscribe(main_engine)
+    # subscribe(main_engine)
+
+    main_engine.subscribe(["rb2210.SHFE"])
+
+    # print(MainEngine.is_night_trading_time())
+
+    # if not MainEngine.is_trading_time():
+    #     main_engine.df.to_csv("C:/Users/33292/Desktop/test.csv")
+    #     main_engine.close()
 
     # gateway: CtpGateway = main_engine.get_all_gateways()[0]te
     # print("mdapi version - ",gateway.md_api.getApiVersion())

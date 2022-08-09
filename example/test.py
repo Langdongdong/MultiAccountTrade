@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from datetime import datetime, time, timedelta
 
+from base.engine import MainEngine
 from pymongo import MongoClient
 from base.database import MongoDatabase
 from base.setting import settings
@@ -8,47 +9,3 @@ import re
 
 
 if __name__ == "__main__":
-    # 'RM301.CZCE', 'eg2209.DCE', 'FG209.CZCE', 'bb2207.DCE', 'pp2209.DCE', 'WH303.CZCE', 'y2209.DCE', 'SA209.CZCE', 'nr2209.INE', 
-    # 'j2209.DCE', 'pg2208.DCE', 'TA209.CZCE', 'T2209.CFFEX', 'AP210.CZCE', 'bu2209.SHFE', 'SF209.CZCE', 'eb2208.DCE', 'cu2208.SHFE', 
-    # 'm2209.DCE', 'ru2209.SHFE', 'a2209.DCE', 'PM209.CZCE', 'lh2209.DCE', 'v2209.DCE', 'l2209.DCE', 'sc2209.INE', 'CJ209.CZCE', 'c2209.DCE', 
-    # 'ni2208.SHFE', 'IH2207.CFFEX', 'fb2209.DCE', 'TF2209.CFFEX', 'ag2212.SHFE', 'jd2209.DCE', 'JR301.CZCE', 'bc2209.INE', 'b2209.DCE', 
-    # 'sp2209.SHFE', 'cs2209.DCE', 'CF209.CZCE', 'SR209.CZCE', 'SM209.CZCE', 'sn2208.SHFE', 'UR209.CZCE', 'zn2208.SHFE', 'rr2209.DCE', 
-    # 'p2209.DCE', 'wr2210.SHFE', 'hc2210.SHFE', 'i2209.DCE', 'jm2209.DCE', 'IF2207.CFFEX', 'IC2207.CFFEX', 'PF210.CZCE', 'lu2210.INE', 
-    # 'OI209.CZCE', 'RS209.CZCE', 'TS2209.CFFEX', 'ZC209.CZCE', 'rb2210.SHFE', 'PK210.CZCE', 'CY209.CZCE', 'al2208.SHFE', 'fu2209.SHFE', 
-    # 'MA209.CZCE', 'LR207.CZCE', 'RI207.CZCE', 'au2212.SHFE', 'pb2208.SHFE', 'ss2208.SHFE'
-    # mongo = MongoDatabase()
-    # data = mongo.load_bar_data("nr2209", "20220713")
-    # for i in data: 
-    #     print(i)
-    # print(len(data))
-
-
-    # print(datetime.now() + timedelta(minutes=10))
-
-<<<<<<< HEAD
-    
-=======
-    # test = Test()
-    # test.fun2()
-    # d = {"test": test}
-    # print(d.get("test").a)
-    # test.a = 122
-    # print(d.get("test").a)
-
-<<<<<<< HEAD
-    target = str("{'R1': 6, 'R2': 1.0}")
-    it = re.findall("(?<=')\S*?(?=':)", target)
-    print(it)
-    
-    it2 = re.findall("(?<=: )\S*[^(, )}]", target)
-    print(it2)
-    # print(re.findall(":[ .+]", target))
-    # re.search()
-    # a = test(1,2,3,4)
-=======
-    from vnpy_ctp.api import MdApi
-
-    print(dir(MdApi))
-    print(help(MdApi))
->>>>>>> 3d8643e8f8de23e7919434485ac580a468df30b1
->>>>>>> 4cb8f7851470bf3cd71a9e30f9f5dd8eeb001394
