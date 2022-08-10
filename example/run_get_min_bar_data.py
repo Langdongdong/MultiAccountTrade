@@ -1,17 +1,14 @@
-from ast import While
 import re
 from time import sleep
 
 from jqdatasdk import is_auth, auth, get_dominant_future
 
-from typing import Dict, Set, Tuple
+from typing import Dict, Set
 
 from base.engine import BarEngine, MainEngine
-from base.setting import settings
 from vnpy.event import EventEngine
 from vnpy.trader.constant import Product, Exchange
 from vnpy_ctp import CtpGateway
-from vnpy_ctptest import CtptestGateway
 
 
 configs = {
@@ -86,13 +83,11 @@ def subscribe(main_engine: MainEngine, gateway_name: str = None) -> None:
 
 if __name__ == "__main__":
 
-    main_engine = MainEngine()
-    # event_engine = EventEngine()
+    while True:
+        if MainEngine.is_trading_time():
+            break
 
-    # while True:
-    #     if MainEngine.is_trading_time():
-    #         break
-    #     sleep(10)
+    main_engine = MainEngine()
 
     bar_engine: BarEngine = main_engine.add_engine(BarEngine, is_persistence = True)
 
@@ -100,21 +95,11 @@ if __name__ == "__main__":
 
     subscribe(main_engine)
 
-    # gateway: CtpGateway = main_engine.get_all_gateways()[0]te
-    # print("mdapi version - ",gateway.md_api.getApiVersion())
-    # print("trading day - ", gateway.td_api.getTradingDay())
-    # print("tdapi version - ",gateway.td_api.getApiVersion())
+    while True:
+        sleep(600)
 
-    # g = CtptestGateway(main_engine.event_engine, "dd")
-    # print(g.md_api.getApiVersion())
-    # while True:
-    #     if not MainEngine.is_trading_time():
-    #     #     for tick in main_engine.get_all_ticks():
-    #     #         for k, v in tick.__dict__.items():
-    #     #             main_engine.log(f"{k}:{v}")
-    #     # sleep(1)
-    #         break
-    #     sleep(60)
+        if not MainEngine.is_trading_time():
+            break
         
-    # main_engine.close()
+    main_engine.close()
     

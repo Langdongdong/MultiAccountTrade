@@ -17,7 +17,7 @@ if __name__ == "__main__":
     # 'OI209.CZCE', 'RS209.CZCE', 'TS2209.CFFEX', 'ZC209.CZCE', 'rb2210.SHFE', 'PK210.CZCE', 'CY209.CZCE', 'al2208.SHFE', 'fu2209.SHFE', 
     # 'MA209.CZCE', 'LR207.CZCE', 'RI207.CZCE', 'au2212.SHFE', 'pb2208.SHFE', 'ss2208.SHFE'
     mongo = MongoDatabase()
-    data = mongo.load_bar_data("cu2209", "20220810")
+    data = mongo.load_bar_data("rb2210", "20220810")
     for i in data: 
         print(i)
     print(len(data))
