@@ -56,7 +56,7 @@ class BarGenerator:
             period_count += 1
 
             if self.period == period_count:
-                bar.date = bar.date.replace(second=0, microsecond=0) + timedelta(minutes=1)
+                bar.date = bar.date.replace(second=0, microsecond=0)
 
                 for k, v in bar.__dict__.items():
                     if type(v) == float:

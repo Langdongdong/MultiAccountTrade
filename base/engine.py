@@ -550,7 +550,7 @@ class BarEngine(BaseEngine):
 
     def filter_bar(self, bar: BarData) -> Optional[BarData]:
         underlying_symbol = re.match("\D*", bar.symbol).group()
-        time = (bar.date - timedelta(minutes=1)).time()
+        time = bar.date.time()
         if MainEngine.is_underlying_symbol_trading_time(underlying_symbol, time):
             return bar
     

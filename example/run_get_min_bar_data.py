@@ -77,15 +77,18 @@ def subscribe(main_engine: MainEngine, gateway_name: str = None) -> None:
         dominant_vt_symbols.add(dominant_vt_symbol)
 
     print(f"Subscribe {len(dominant_vt_symbols)} {dominant_vt_symbols}")
+
+    for i in dominant_vt_symbols:
+        print(main_engine.get_contract(i))
     
     main_engine.subscribe(dominant_vt_symbols, gateway_name)
 
 
 if __name__ == "__main__":
 
-    while True:
-        if MainEngine.is_trading_time():
-            break
+    # while True:
+    #     if MainEngine.is_trading_time():
+    #         break
 
     main_engine = MainEngine()
 
@@ -95,11 +98,13 @@ if __name__ == "__main__":
 
     subscribe(main_engine)
 
-    while True:
-        sleep(600)
+    # while True:
+    #     sleep(600)
 
-        if not MainEngine.is_trading_time():
-            break
+    #     if not MainEngine.is_trading_time():
+    #         break
+
+    
         
-    main_engine.close()
+    # main_engine.close()
     
