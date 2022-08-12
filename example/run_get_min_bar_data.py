@@ -13,26 +13,26 @@ from vnpy_ctp import CtpGateway
 
 configs = {
     "accounts": {
-        "DDTEST0": {
-            "用户名": "20177599",
-            "密码": "19910703",
-            "经纪商代码": "8080",
-            "交易服务器": "27.115.78.182:41206",
-            "行情服务器": "27.115.78.182:41214",
-            "产品名称": "client_gwqtrader_v1.0.0",
-            "授权编码": "L8WN410RZ28OJM3X",
+        # "DDTEST0": {
+        #     "用户名": "20177599",
+        #     "密码": "19910703",
+        #     "经纪商代码": "8080",
+        #     "交易服务器": "27.115.78.182:41206",
+        #     "行情服务器": "27.115.78.182:41214",
+        #     "产品名称": "client_gwqtrader_v1.0.0",
+        #     "授权编码": "L8WN410RZ28OJM3X",
+        #     "gateway": CtpGateway
+        # },
+        "DDTEST1": {
+            "用户名": "91600338",
+            "密码": "dd027232",
+            "经纪商代码": "5040",
+            "交易服务器": "180.169.95.243:21205",
+            "行情服务器": "220.248.39.103:21213",
+            "产品名称": "client_ddtrader_v1.0.0",
+            "授权编码": "GFB98U1HSAZJEZNE",
             "gateway": CtpGateway
         },
-        # "DDTEST1": {
-        #     "用户名": "91600338",
-        #     "密码": "dd027232",
-        #     "经纪商代码": "5040",
-        #     "交易服务器": "180.169.95.243:21205",
-        #     "行情服务器": "220.248.39.103:21213",
-        #     "产品名称": "client_miaowazy_1.0.0",
-        #     "授权编码": "127WVB6B0IYUWYVK",
-        #     "gateway": CtptestGateway
-        # },
         # "DDTEST2": {
         #     "用户名": "99000072",
         #     "密码": "20202020",
@@ -74,21 +74,26 @@ def subscribe(main_engine: MainEngine, gateway_name: str = None) -> None:
         else:
             dominant_vt_symbol = f"{dominant_symbol.lower()}.{exchange.value}"
 
-        dominant_vt_symbols.add(dominant_vt_symbol)
+        if exchange in [Exchange.SHFE, Exchange.CFFEX]:
+            continue
+
+        contract = main_engine.get_contract(dominant_vt_symbol)
+        if contract:
+            dominant_vt_symbols.add(contract.vt_symbol)
 
     print(f"Subscribe {len(dominant_vt_symbols)} {dominant_vt_symbols}")
 
-    for i in dominant_vt_symbols:
-        print(main_engine.get_contract(i))
+    # for i in dominant_vt_symbols:
+    #     print(main_engine.get_contract(i))
     
     main_engine.subscribe(dominant_vt_symbols, gateway_name)
 
 
 if __name__ == "__main__":
 
-    # while True:
-    #     if MainEngine.is_trading_time():
-    #         break
+    while True:
+        if MainEngine.is_trading_time():
+            break
 
     main_engine = MainEngine()
 
@@ -98,13 +103,13 @@ if __name__ == "__main__":
 
     subscribe(main_engine)
 
-    # while True:
-    #     sleep(600)
+    while True:
+        sleep(600)
 
-    #     if not MainEngine.is_trading_time():
-    #         break
+        if not MainEngine.is_trading_time():
+            break
 
     
         
-    # main_engine.close()
+    main_engine.close()
     

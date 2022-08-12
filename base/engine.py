@@ -92,7 +92,7 @@ class MainEngine():
         current_time = datetime.now().time()
         trading_time: Set[time] = settings.get("tradingtime.night")
         for i in range(0, len(trading_time), 2):
-            if trading_time[i] <= current_time <= trading_time[i+1]:
+            if trading_time[i] <= current_time or current_time <= trading_time[i+1]:
                 return True
         return False
 
@@ -101,9 +101,15 @@ class MainEngine():
         for underlying_symbols, trading_time in settings.get("symbol.tradingtime").items():
             if underlying_symbol in underlying_symbols:
                 for i in range(0, len(trading_time), 2):
-                    if trading_time[i] <= time <= trading_time[i+1]:
-                        return True
-                return False
+                    
+                    if MainEngine.is_night_trading_time():
+                        if trading_time[i] <= time or time <= trading_time[i+1]:
+                            return True
+
+                    elif MainEngine.is_day_trading_time():
+                        if trading_time[i] <= time <= trading_time[i+1]:
+                            return True
+        return False
 
     @staticmethod
     def filter_day_symbol(vt_symbols: Set[str]) -> Set[str]:
@@ -345,6 +351,10 @@ class MainEngine():
         for gateway in self.gateways.values():
             gateway.close()
 
+    # def add_ctpgateway_fun(self):
+    #     for g in self.get_all_gateways():
+    #         g.
+
 
 class BaseEngine(ABC):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
@@ -514,19 +524,21 @@ class LogEngine(BaseEngine):
 
 
 class BarEngine(BaseEngine):
-    def __init__(self, main_engine: MainEngine, event_engine: EventEngine, period: int = 1, size: int = 0, is_persistence: bool = False) -> None:
+    def __init__(self, main_engine: MainEngine, event_engine: EventEngine, period: int = 1, is_persistence: bool = False) -> None:
         super().__init__(main_engine, event_engine)
         
         self.bar_generator = None
-        self.array_manager = None
+        # self.array_manager = None
         self.database = None
+
+        self.dfs: Dict[str, pandas.DataFrame] = {}
 
         if period:
             self.bar_generator = BarGenerator(period)
             self.register_tick_process()
         
-        if size:
-            self.array_manager = ArrayManager(size)
+        # if size:
+        #     self.array_manager = ArrayManager(size)
 
         if is_persistence:
             self.database = MongoDatabase()
@@ -540,19 +552,19 @@ class BarEngine(BaseEngine):
             self.bar_generator.update_tick(tick, self.process_bar_event)
 
     def process_bar_event(self, bar: BarData) -> None:
-        bar = self.filter_bar(bar)
+        # bar = self.filter_bar(bar)
         if bar:
-            if self.array_manager:
-                self.array_manager.udpate_bar(bar)
+            # if self.array_manager:
+            #     self.array_manager.udpate_bar(bar)
 
             if self.database:
                 self.persist_bar_data(bar)
 
-    def filter_bar(self, bar: BarData) -> Optional[BarData]:
-        underlying_symbol = re.match("\D*", bar.symbol).group()
-        time = bar.date.time()
-        if MainEngine.is_underlying_symbol_trading_time(underlying_symbol, time):
-            return bar
+    # def filter_bar(self, bar: BarData) -> Optional[BarData]:
+    #     underlying_symbol = re.match("\D*", bar.symbol).group()
+    #     time = bar.date.time()
+    #     if MainEngine.is_underlying_symbol_trading_time(underlying_symbol, time):
+    #         return bar
     
     def persist_bar_data(self, bar: BarData) -> bool:
         if bar.date.time().hour >= 20:
@@ -563,4 +575,5 @@ class BarEngine(BaseEngine):
         return self.database.insert_bar_data([bar], collection_name)
 
     def close(self):
-        self.database.client.close()
+        if self.database:
+            self.database.client.close()
