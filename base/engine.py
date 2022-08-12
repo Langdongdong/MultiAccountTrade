@@ -556,6 +556,12 @@ class BarEngine(BaseEngine):
         if bar:
             # if self.array_manager:
             #     self.array_manager.udpate_bar(bar)
+            df = self.dfs.get(bar.symbol)
+            if df is None:
+                self.dfs[bar.symbol] = pandas.DataFrame()
+                df = self.dfs.get(bar.symbol)
+            self.dfs[bar.symbol] = pandas.concat([df, bar.to_df()], ignore_index=True)
+
 
             if self.database:
                 self.persist_bar_data(bar)
@@ -577,3 +583,6 @@ class BarEngine(BaseEngine):
     def close(self):
         if self.database:
             self.database.client.close()
+
+        for k, v in self.dfs.items():
+            v.to_csv(f"D:/{k}.csv")
