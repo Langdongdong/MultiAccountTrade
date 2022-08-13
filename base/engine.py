@@ -96,20 +96,20 @@ class MainEngine():
                 return True
         return False
 
-    @staticmethod
-    def is_underlying_symbol_trading_time(underlying_symbol: str, time: time) -> bool:
-        for underlying_symbols, trading_time in settings.get("symbol.tradingtime").items():
-            if underlying_symbol in underlying_symbols:
-                for i in range(0, len(trading_time), 2):
+    # @staticmethod
+    # def is_symbol_trading_time(vt_symbol: str, time: time) -> bool:
+    #     for underlying_symbols, trading_time in settings.get("symbol.tradingtime").items():
+    #         if underlying_symbol in underlying_symbols:
+    #             for i in range(0, len(trading_time), 2):
                     
-                    if MainEngine.is_night_trading_time():
-                        if trading_time[i] <= time or time <= trading_time[i+1]:
-                            return True
+    #                 if MainEngine.is_night_trading_time():
+    #                     if trading_time[i] <= time or time <= trading_time[i+1]:
+    #                         return True
 
-                    elif MainEngine.is_day_trading_time():
-                        if trading_time[i] <= time <= trading_time[i+1]:
-                            return True
-        return False
+    #                 elif MainEngine.is_day_trading_time():
+    #                     if trading_time[i] <= time <= trading_time[i+1]:
+    #                         return True
+    #     return False
 
     @staticmethod
     def filter_day_symbol(vt_symbols: Set[str]) -> Set[str]:
@@ -573,8 +573,12 @@ class BarEngine(BaseEngine):
     #         return bar
     
     def persist_bar_data(self, bar: BarData) -> bool:
-        if bar.date.time().hour >= 20:
-                collection_name = (bar.date + timedelta(days=1)).date().strftime("%Y%m%d")
+        if MainEngine.is_night_trading_time():
+            name_date = (bar.date + timedelta(days=1)).date()
+            if name_date.weekday() == 5:
+                collection_name = (name_date + timedelta(days=2)).strftime("%Y%m%d")
+            else:
+                collection_name = name_date.strftime("%Y%m%d")
         else:
             collection_name = bar.date.date().strftime("%Y%m%d")
 
