@@ -74,8 +74,8 @@ def subscribe(main_engine: MainEngine, gateway_name: str = None) -> None:
         else:
             dominant_vt_symbol = f"{dominant_symbol.lower()}.{exchange.value}"
 
-        if exchange in [Exchange.SHFE, Exchange.CFFEX]:
-            continue
+        # if exchange in [Exchange.SHFE, Exchange.CFFEX]:
+        #     continue
 
         contract = main_engine.get_contract(dominant_vt_symbol)
         if contract:
