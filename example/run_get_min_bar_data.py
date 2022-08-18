@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
     main_engine = MainEngine()
 
-    bar_engine: BarEngine = main_engine.add_engine(BarEngine, is_persistence = False)
+    bar_engine: BarEngine = main_engine.add_engine(BarEngine, is_persistence = True)
 
     main_engine.connect(configs.get("accounts"))
 
