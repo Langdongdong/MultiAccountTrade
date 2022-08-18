@@ -11,6 +11,9 @@ from .utility import ArrayManager, BarGenerator, get_df
 from .setting import settings
 from .object import BarData
 
+from vnpy_ctp import CtpGateway
+from vnpy_rohon import RohonGateway
+
 from vnpy.event import Event, EventEngine
 from vnpy.trader.gateway import BaseGateway
 from vnpy.trader.constant import (
@@ -351,9 +354,10 @@ class MainEngine():
         for gateway in self.gateways.values():
             gateway.close()
 
-    # def add_ctpgateway_fun(self):
-    #     for g in self.get_all_gateways():
-    #         g.
+    def add_ctp_fun(self):
+        for g in self.get_all_gateways():
+            if isinstance(g, CtpGateway) or isinstance(g, RohonGateway):
+                g.
 
 
 class BaseEngine(ABC):
