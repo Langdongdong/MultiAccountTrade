@@ -358,11 +358,11 @@ class MainEngine():
             gateway.close()
 
     def add_ctp_fun(self):
+        print("add onRspSubMarketData")
         for g in self.get_all_gateways():
-            if isinstance(g, CtpGateway) or isinstance(g, RohonGateway):
-                g.OnRspSubMarketData = self.OnRspSubMarketData
+            g.onRspSubMarketData = self.onRspSubMarketData
 
-    def OnRspSubMarketData(self, data: dict, error: dict, reqid: int, last: bool):
+    def onRspSubMarketData(self, data: dict, error: dict, reqid: int, last: bool):
         print(data['InstrumenID'])
         print(error['ErrorID'])
         print(error['ErrorMsg'])
