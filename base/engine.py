@@ -58,6 +58,7 @@ class MainEngine():
         return cls._instance
 
     def __init__(self) -> None:
+        
         self.event_engine = EventEngine()
         self.event_engine.start()
         
@@ -71,6 +72,8 @@ class MainEngine():
 
         self.gateways: Dict[str, BaseGateway] = {}
         self.engines: Dict[str, BaseEngine] = {}
+
+        self.add_ctp_fun()
 
         self.add_engine(LogEngine)
         self.register_process_event()
@@ -357,7 +360,12 @@ class MainEngine():
     def add_ctp_fun(self):
         for g in self.get_all_gateways():
             if isinstance(g, CtpGateway) or isinstance(g, RohonGateway):
-                g.
+                g.OnRspSubMarketData = self.OnRspSubMarketData
+
+    def OnRspSubMarketData(self, data: dict, error: dict, reqid: int, last: bool):
+        print(data['InstrumenID'])
+        print(error['ErrorID'])
+        print(error['ErrorMsg'])
 
 
 class BaseEngine(ABC):
