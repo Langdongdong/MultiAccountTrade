@@ -10,7 +10,7 @@ from pymongo.results import DeleteResult
 from pytz import timezone
 from tzlocal import get_localzone_name
 
-from base.ctp_engine import CtpEngine
+from base.engine import CtpEngine
 from base.setting import SETTINGS
 
 from vnpy.trader.constant import Exchange, Interval

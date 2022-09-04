@@ -9,7 +9,7 @@ from jqdatasdk import is_auth, auth, get_dominant_future
 
 from typing import Dict, Set
 
-from base.engine import BarEngine, MainEngine
+from base.engine_old import BarEngine, MainEngine
 from vnpy.event import EventEngine
 from vnpy.trader.constant import Product, Exchange
 from vnpy_ctp import CtpGateway
