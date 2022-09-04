@@ -1,7 +1,8 @@
+from datetime import datetime
 import sys
 sys.path.append('.')
 
-import re
+import re, pandas
 from time import sleep
 
 from jqdatasdk import is_auth, auth, get_dominant_future
@@ -26,7 +27,7 @@ configs = {
         #     "授权编码": "L8WN410RZ28OJM3X",
         #     "gateway": CtpGateway
         # },
-        "DDTEST1": {
+        "ZHONGYINQIHUO": {
             "用户名": "91600338",
             "密码": "dd027232",
             "经纪商代码": "5040",
@@ -84,7 +85,7 @@ def subscribe(main_engine: MainEngine, gateway_name: str = None) -> None:
         if contract:
             dominant_vt_symbols.add(contract.vt_symbol)
 
-    print(f"Subscribe {len(dominant_vt_symbols)} {dominant_vt_symbols}")
+    print(f"Subscribe {len(dominant_vt_symbols)}")
 
     # for i in dominant_vt_symbols:
     #     print(main_engine.get_contract(i))
@@ -101,17 +102,28 @@ if __name__ == "__main__":
     main_engine = MainEngine()
 
     bar_engine: BarEngine = main_engine.add_engine(BarEngine, is_persistence = True)
-
+ 
     main_engine.connect(configs.get("accounts"))
 
-    subscribe(main_engine)
+    subscribe(main_engine) 
 
     while True:
-        sleep(600)
-
+        sleep(60)
+        
         if not MainEngine.is_trading_time():
             break
+        print(datetime.now())
+        print("bar count", len(bar_engine.bar_generator.bars))
+        print(bar_engine.bar_generator.bars)
 
+        print(len(bar_engine.bar_generator.last_ticks))
+        print(bar_engine.bar_generator.last_ticks)
+
+        print(len(main_engine.ticks))
+        # print(main_engine.ticks)
+
+        data: pandas.DataFrame = main_engine.get_all_ticks(True)
+        data.to_csv("D:/test.csv")
     
         
     main_engine.close()

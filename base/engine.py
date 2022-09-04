@@ -44,7 +44,7 @@ from vnpy.trader.object import (
 )
 
 """
-####################### Change PositionData Struct ######################
+####################### Change PositionData Struct,  contractdata struct ######################
 """
 class MainEngine():
     """
@@ -73,7 +73,7 @@ class MainEngine():
         self.gateways: Dict[str, BaseGateway] = {}
         self.engines: Dict[str, BaseEngine] = {}
 
-        self.add_ctp_fun()
+        # self.add_ctp_fun()
 
         self.add_engine(LogEngine)
         self.register_process_event()
@@ -357,16 +357,6 @@ class MainEngine():
         for gateway in self.gateways.values():
             gateway.close()
 
-    def add_ctp_fun(self):
-        print("add onRspSubMarketData")
-        for g in self.get_all_gateways():
-            g.onRspSubMarketData = self.onRspSubMarketData
-
-    def onRspSubMarketData(self, data: dict, error: dict, reqid: int, last: bool):
-        print(data['InstrumenID'])
-        print(error['ErrorID'])
-        print(error['ErrorMsg'])
-
 
 class BaseEngine(ABC):
     def __init__(self, main_engine: MainEngine, event_engine: EventEngine) -> None:
@@ -560,23 +550,23 @@ class BarEngine(BaseEngine):
 
     def process_tick_event(self, event: Event) -> None:
         tick: TickData = event.data
-        if tick:
-            self.bar_generator.update_tick(tick, self.process_bar_event)
+        # self.database.insert_tick_data([tick], 'tickdata')
+        self.bar_generator.update_tick(tick, self.process_bar_event)
 
     def process_bar_event(self, bar: BarData) -> None:
         # bar = self.filter_bar(bar)
-        if bar:
+        # if bar:
             # if self.array_manager:
             #     self.array_manager.udpate_bar(bar)
+        df = self.dfs.get(bar.symbol)
+        if df is None:
+            self.dfs[bar.symbol] = pandas.DataFrame()
             df = self.dfs.get(bar.symbol)
-            if df is None:
-                self.dfs[bar.symbol] = pandas.DataFrame()
-                df = self.dfs.get(bar.symbol)
-            self.dfs[bar.symbol] = pandas.concat([df, bar.to_df()], ignore_index=True)
+        self.dfs[bar.symbol] = pandas.concat([df, bar.to_df()], ignore_index=True)
 
 
-            if self.database:
-                self.persist_bar_data(bar)
+        if self.database:
+            self.persist_bar_data(bar)
 
     # def filter_bar(self, bar: BarData) -> Optional[BarData]:
     #     underlying_symbol = re.match("\D*", bar.symbol).group()
