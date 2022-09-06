@@ -412,7 +412,7 @@ class CtpEngine():
         now = datetime.now()
         now = now.replace(tzinfo=bar.datetime.tzinfo)
 
-        if bar.datetime < now - timedelta(seconds=SETTINGS["barfilter.latency"]):
+        if bar.datetime < now - timedelta(seconds=SETTINGS["barfilter.latency"]) and bar.datetime.minute != now.minute:
             return
 
         return bar
@@ -458,7 +458,7 @@ class CtpEngine():
         self.test_bar_symbol_set.add(bar.symbol)
         print(
             datetime.now(), 
-            self.test_bar_symbol_set, 
+            len(self.test_bar_symbol_set), 
             bar
         )
         # testing

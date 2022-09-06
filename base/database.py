@@ -108,12 +108,15 @@ class MongoDatabase():
     def load_bar_data(
         self,
         symbol: str,
-        start: datetime,
-        end: datetime
+        start: str,
+        end: str
     ) -> List[BarData]:
         """
         # Load bar data.
         """
+        start: datetime = datetime.strptime(start, "%Y%m%d")
+        end:datetime = datetime.strptime(end, "%Y%m%d")
+
         filter: Dict[str, Any] = {
             "symbol": symbol,
             "datetime": {
@@ -230,12 +233,15 @@ class MongoDatabase():
     def load_tick_data(
         self,
         symbol: str,
-        start: datetime,
-        end: datetime
+        start: str,
+        end: str
     ) -> List[TickData]:
         """
         # Load tick data.
         """
+        start: datetime = datetime.strptime(start, "%Y%m%d")
+        end:datetime = datetime.strptime(end, "%Y%m%d")
+
         filter: dict = {
             "symbol": symbol,
             "datetime": {
@@ -270,14 +276,3 @@ class MongoDatabase():
         result: DeleteResult = self.tick_collection.delete_many(filter)
 
         return result.deleted_count
-
-    # def get_store_date(self) -> str:
-    #     store_time = datetime.now()
-
-    #     if CtpEngine.is_night_trading_time():
-    #         store_time = store_time + timedelta(days=1)
-
-    #         if store_time.weekday() == 5:
-    #             store_time = store_time + timedelta(days=2)
-
-    #     return store_time.strftime("%Y%m%d")
