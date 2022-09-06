@@ -395,9 +395,10 @@ class CtpEngine():
         now = datetime.now()
         now = now.replace(tzinfo=tick.datetime.tzinfo)
 
-        if tick.datetime > now:
-            return 
-        elif tick.datetime < now - timedelta(seconds=SETTINGS["tickfilter.latency"]):
+        if (
+            tick.datetime > now or 
+            tick.datetime < now - timedelta(seconds=SETTINGS["tickfilter.latency"])
+        ):
             return
 
         return tick
@@ -412,7 +413,11 @@ class CtpEngine():
         now = datetime.now()
         now = now.replace(tzinfo=bar.datetime.tzinfo)
 
-        if bar.datetime < now - timedelta(seconds=SETTINGS["barfilter.latency"]) and bar.datetime.minute != now.minute:
+        if (
+            bar.datetime < now and 
+            bar.datetime.minute != now.minute and 
+            now.second >= SETTINGS["barfilter.latency"]
+        ):
             return
 
         return bar
@@ -439,9 +444,7 @@ class CtpEngine():
             if not self.bar_filter(bar):
                 bar = self.get_bar_generator(bar.symbol).generate()
 
-
                 print(datetime.now(), "Activate generate", bar.symbol)
-                self.test_bar_symbol_set.discard(bar.symbol)
         
     def process_bar_event(self, bar: BarData) -> None:
         """
@@ -460,7 +463,6 @@ class CtpEngine():
         self.test_bar_symbol_set.add(bar.symbol)
         print(
             datetime.now(), 
-            len(self.test_bar_symbol_set), 
             bar
         )
         # testing
