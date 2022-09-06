@@ -584,7 +584,7 @@ class CtpEngine():
         if bar.volume:
             bar.avg_price = round((bar.turnover / (bar.volume * self.get_contract(bar.symbol).size)), 2)
 
-        self.database.save_bar_data(bar)
+        self.database.save_bar_data([bar])
 
         # testing
         self.test_bar_symbol_set.add(bar.symbol)
