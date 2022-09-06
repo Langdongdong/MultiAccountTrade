@@ -5,7 +5,7 @@ from abc import ABC
 from copy import copy
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Set, Type
+from typing import Any, Dict, List, Optional, Sequence, Type
 
 from base.database import MongoDatabase
 from base.setting import SETTINGS
@@ -53,7 +53,8 @@ class CtpEngine():
     ## Note:
     ## 1. PositionData add attribute 'self.positionid: str = f"{self.gateway_name}.{self.symbol}.{self.direction.value}"'.
     ## 2. BarData add attribute "limit_up", "limit_down", "avg_price", "pre_close".
-    ## 3. BarGenerator's "update_tick()" and "generate()" changed to fit BarData.
+    ## 3. BarGenerator's "update_tick()" changed to fit BarData.
+    ## 4. Porcess_bar_event add "if bar.volume: bar.avg_price = round((bar.turnover * 1.0 / (bar.volume * self.get_contract(bar.symbol).size)),2)"
     """
 
     @staticmethod
@@ -105,6 +106,8 @@ class CtpEngine():
 
         self.bar_generators: Dict[str, BarGenerator] = {}
         self.database: MongoDatabase = MongoDatabase()
+
+        self.test_bar_symbol_set = set()
 
         self.register_event()
         self.init_modules()
@@ -209,7 +212,7 @@ class CtpEngine():
         """
         ## Start connection of a specific gateway.
         """
-        gateway: BaseGateway = self.get_gateway(gateway_name)
+        gateway: BaseGateway = self.add_gateway(setting["gateway"], gateway_name)
         if gateway:
             gateway.connect(setting)
 
@@ -242,7 +245,7 @@ class CtpEngine():
                     )
                     gateway.subscribe(req)
                 
-                self.bar_generators[symbol] = BarGenerator(self.on_bar)
+                self.bar_generators[symbol] = BarGenerator(self.process_bar_event)
 
     def send_order(
         self, 
@@ -379,7 +382,7 @@ class CtpEngine():
 
     def tick_filter(self, tick: TickData) -> Optional[TickData]:
         now = datetime.now()
-        now.replace(tzinfo=tick.datetime.tzinfo)
+        now = now.replace(tzinfo=tick.datetime.tzinfo)
 
         if tick.datetime > now:
             return 
@@ -401,14 +404,24 @@ class CtpEngine():
 
         self.event_engine.register(EVENT_TIMER, self.process_timer_event)
 
-    def process_timer_event(self) -> None:
+    def process_timer_event(self, event: Event) -> None:
         """
         ## Process timer event.
-        """
-        now = datetime.now()
+        # """
+        now = datetime.now() - timedelta(SETTINGS["tickfilter.latency"])
         for bar_generator in self.get_all_bar_generators():
-            if bar_generator.bar.datetime.minute != now.minute:
-                bar_generator.generate()
+            if bar_generator.bar and bar_generator.bar.datetime.minute < now.minute:
+                # testing
+                print(now, "active generate")
+                # testing
+
+
+                bar = bar_generator.generate()
+
+                # testing
+                self.test_bar_symbol_set.discard(bar.symbol)
+                # testing
+
 
     def process_tick_event(self, event: Event) -> None:
         """
@@ -420,7 +433,6 @@ class CtpEngine():
             tick: TickData = self.tick_filter(tick)
             if not tick:
                 return
-
         self.ticks[tick.symbol] = tick
 
         bar_generator: BarGenerator = self.get_bar_generator(tick.symbol)
@@ -565,8 +577,25 @@ class CtpEngine():
             ]
             return active_orders
 
-    def on_bar(self, bar: BarData) -> None:
-        self.database.save_bar_data([bar])
+    def process_bar_event(self, bar: BarData) -> None:
+        """
+        ## Process bar event.
+        """
+        if bar.volume:
+            bar.avg_price = round((bar.turnover / (bar.volume * self.get_contract(bar.symbol).size)), 2)
+
+        self.database.save_bar_data(bar)
+
+        # testing
+        self.test_bar_symbol_set.add(bar.symbol)
+        print(
+            datetime.now(), 
+            len(self.test_bar_symbol_set), 
+            self.test_bar_symbol_set, 
+            bar
+        )
+        # testing
+
 
     def close(self) -> None:
         """

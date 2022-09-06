@@ -3,6 +3,8 @@ import logging
 from datetime import time
 from typing import Any, Dict
 
+from vnpy_ctp import CtpGateway
+
 SETTINGS: Dict[str, Any] = {
     "log.active": True,
     "log.level": logging.INFO,
@@ -17,7 +19,7 @@ SETTINGS: Dict[str, Any] = {
     "database.password": "",
 
     "tickfilter.active": True,
-    "tickfilter.latency": 120,  # second unit
+    "tickfilter.latency": 10,  # second unit
 
     "tradingtime.day": (time(8, 55), time(15,20)),
     "tradingtime.night": (time(20, 55), time(2, 35)),
@@ -34,7 +36,7 @@ SETTINGS: Dict[str, Any] = {
 }
 
 ACCOUNTS: Dict[str, Any] = {
-    # "DDTEST0": {
+    # "HUATAI": {
     #     "用户名": "20177599",
     #     "密码": "19910703",
     #     "经纪商代码": "8080",

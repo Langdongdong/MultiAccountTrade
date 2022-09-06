@@ -5,7 +5,7 @@ from datetime import datetime, time, timedelta
 
 from pymongo import MongoClient
 from base.database import MongoDatabase
-from base.setting import settings
+from base.setting import SETTINGS
 import re
 
 
@@ -20,7 +20,7 @@ if __name__ == "__main__":
     # 'v2209.DCE', 'ru2301.SHFE', 'ni2209.SHFE', 'pg2209.DCE', 'eg2209.DCE', 'LR305.CZCE', 'CF301.CZCE', 'T2209.CFFEX', 
     # 'IF2209.CFFEX', 'PF210.CZCE', 'TF2209.CFFEX', 'fb2209.DCE', 'm2301.DCE', 'jd2209.DCE', 'MA209.CZCE'
     mongo = MongoDatabase()
-    data = mongo.load_bar_data("CY301", "20220905")
+    data = mongo.load_bar_data("au2212", datetime.strptime("20220904","%Y%m%d"),datetime.strptime("20220908","%Y%m%d"))
     for i in data: 
         print(i)
     print(len(data))

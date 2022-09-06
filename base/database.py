@@ -10,7 +10,6 @@ from pymongo.results import DeleteResult
 from pytz import timezone
 from tzlocal import get_localzone_name
 
-from base.engine import CtpEngine
 from base.setting import SETTINGS
 
 from vnpy.trader.constant import Exchange, Interval
@@ -272,13 +271,13 @@ class MongoDatabase():
 
         return result.deleted_count
 
-    def get_store_date(self) -> str:
-        store_time = datetime.now()
+    # def get_store_date(self) -> str:
+    #     store_time = datetime.now()
 
-        if CtpEngine.is_night_trading_time():
-            store_time = store_time + timedelta(days=1)
+    #     if CtpEngine.is_night_trading_time():
+    #         store_time = store_time + timedelta(days=1)
 
-            if store_time.weekday() == 5:
-                store_time = store_time + timedelta(days=2)
+    #         if store_time.weekday() == 5:
+    #             store_time = store_time + timedelta(days=2)
 
-        return store_time.strftime("%Y%m%d")
+    #     return store_time.strftime("%Y%m%d")
