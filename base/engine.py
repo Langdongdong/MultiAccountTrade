@@ -447,11 +447,13 @@ class CtpEngine():
         """
         ## Process bar event.
         """
+        # Add average price attribute to bar data.
         contract: ContractData = self.get_contract(bar.symbol)
         tick: TickData = self.get_tick(bar.symbol)
         if contract and tick and tick.volume:
             bar.avg_price = round((tick.turnover / (tick.volume * contract.size)), 2)
 
+        # Save bar data to database.
         self.database.save_bar_data([bar])
 
         # testing
