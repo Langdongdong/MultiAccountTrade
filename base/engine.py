@@ -50,11 +50,16 @@ from vnpy.trader.object import (
 class CtpEngine():
     """
     #  Used for ctp-like gateways.
+
     ## Note:
+
     ## 1. PositionData add attribute 'self.positionid: str = f"{self.gateway_name}.{self.symbol}.{self.direction.value}"'.
+
     ## 2. BarData add attribute "limit_up", "limit_down", "avg_price", "pre_close".
-    ## 3. BarGenerator's "update_tick()" changed to fit BarData.
-    ## 4. Porcess_bar_event add "if bar.volume: bar.avg_price = round((bar.turnover * 1.0 / (bar.volume * self.get_contract(bar.symbol).size)),2)"
+
+    ## 3. BarGenerator's "update_tick()" add "limit_up", "limit_down", "pre_close".
+
+    ## 4. Porcess_bar_event add bar.avg_prive calculation.
     """
 
     @staticmethod
@@ -381,6 +386,12 @@ class CtpEngine():
             gateway.cancel_order(req)
 
     def tick_filter(self, tick: TickData) -> Optional[TickData]:
+        """
+        ## Filter tick data. Return None if tick.datetime is not in the correct range else return tick data.
+        """
+        if not SETTINGS["tickfilter.active"]:
+            return tick
+
         now = datetime.now()
         now = now.replace(tzinfo=tick.datetime.tzinfo)
 
@@ -390,6 +401,21 @@ class CtpEngine():
             return
 
         return tick
+
+    def bar_filter(self, bar: BarData) -> Optional[BarData]:
+        """
+        ## Filter bar data. Return None if bar.datetime is not in the correct range else return bar data.
+        """
+        if not SETTINGS["barfilter.active"]:
+            return bar
+
+        now = datetime.now()
+        now = now.replace(tzinfo=bar.datetime.tzinfo)
+
+        if bar.datetime < now - timedelta(seconds=SETTINGS["barfilter.latency"]):
+            return
+
+        return bar
 
     def register_event(self) -> None:
         """
@@ -408,36 +434,46 @@ class CtpEngine():
         """
         ## Process timer event.
         # """
-        now = datetime.now() - timedelta(SETTINGS["tickfilter.latency"])
-        for bar_generator in self.get_all_bar_generators():
-            if bar_generator.bar and bar_generator.bar.datetime.minute < now.minute:
-                # testing
-                print(now, "active generate")
-                # testing
+        bars = [bar_generator.bar for bar_generator in self.get_all_bar_generators() if bar_generator.bar]
+        for bar in bars:
+            if not self.bar_filter(bar):
+                bar = self.get_bar_generator(bar.symbol).generate()
 
 
-                bar = bar_generator.generate()
-
-                # testing
+                print(datetime.now(), "Activate generate", bar.symbol)
                 self.test_bar_symbol_set.discard(bar.symbol)
-                # testing
+        
+    def process_bar_event(self, bar: BarData) -> None:
+        """
+        ## Process bar event.
+        """
+        contract: ContractData = self.get_contract(bar.symbol)
+        tick: TickData = self.get_tick(bar.symbol)
+        if contract and tick and tick.volume:
+            bar.avg_price = round((tick.turnover / (tick.volume * contract.size)), 2)
 
+        self.database.save_bar_data([bar])
+
+        # testing
+        self.test_bar_symbol_set.add(bar.symbol)
+        print(
+            datetime.now(), 
+            self.test_bar_symbol_set, 
+            bar
+        )
+        # testing
 
     def process_tick_event(self, event: Event) -> None:
         """
         ## Process tick event.
         """
-        tick: TickData = event.data
+        tick: TickData = self.tick_filter(event.data)
+        if tick:
+            self.ticks[tick.symbol] = tick
 
-        if SETTINGS["tickfilter.active"]:
-            tick: TickData = self.tick_filter(tick)
-            if not tick:
-                return
-        self.ticks[tick.symbol] = tick
-
-        bar_generator: BarGenerator = self.get_bar_generator(tick.symbol)
-        if bar_generator:
-            bar_generator.update_tick(tick)            
+            bar_generator: BarGenerator = self.get_bar_generator(tick.symbol)
+            if bar_generator:
+                bar_generator.update_tick(tick)
 
     def process_order_event(self, event: Event) -> None:
         """
@@ -576,26 +612,6 @@ class CtpEngine():
                 if order.symbol == symbol
             ]
             return active_orders
-
-    def process_bar_event(self, bar: BarData) -> None:
-        """
-        ## Process bar event.
-        """
-        if bar.volume:
-            bar.avg_price = round((bar.turnover / (bar.volume * self.get_contract(bar.symbol).size)), 2)
-
-        self.database.save_bar_data([bar])
-
-        # testing
-        self.test_bar_symbol_set.add(bar.symbol)
-        print(
-            datetime.now(), 
-            len(self.test_bar_symbol_set), 
-            self.test_bar_symbol_set, 
-            bar
-        )
-        # testing
-
 
     def close(self) -> None:
         """
