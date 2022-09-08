@@ -112,8 +112,6 @@ class CtpEngine():
         self.bar_generators: Dict[str, BarGenerator] = {}
         self.database: MongoDatabase = MongoDatabase()
 
-        self.test_bar_symbol_set = set()
-
         self.register_event()
         self.init_modules()
 
@@ -439,12 +437,11 @@ class CtpEngine():
         """
         ## Process timer event.
         # """
-        bars = [bar_generator.bar for bar_generator in self.get_all_bar_generators() if bar_generator.bar]
-        for bar in bars:
-            if not self.bar_filter(bar):
-                bar = self.get_bar_generator(bar.symbol).generate()
-
-                print(datetime.now(), "Activate generate", bar.symbol)
+        bars = [
+            bg.generate() 
+            for bg in self.get_all_bar_generators() 
+            if bg.bar and not self.bar_filter(bg.bar)
+        ]
         
     def process_bar_event(self, bar: BarData) -> None:
         """
@@ -457,15 +454,9 @@ class CtpEngine():
             bar.avg_price = round((tick.turnover / (tick.volume * contract.size)), 2)
 
         # Save bar data to database.
-        self.database.save_bar_data([bar])
+        if SETTINGS["database.active"]:
+            self.database.save_bar_data([bar])
 
-        # testing
-        self.test_bar_symbol_set.add(bar.symbol)
-        print(
-            datetime.now(), 
-            bar
-        )
-        # testing
 
     def process_tick_event(self, event: Event) -> None:
         """

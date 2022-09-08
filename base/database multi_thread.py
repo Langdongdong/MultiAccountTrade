@@ -1,6 +1,10 @@
-from datetime import datetime, timedelta
-from queue import Queue
-from typing import Any, Dict, List
+from cgitb import handler
+from collections import defaultdict
+from datetime import datetime
+from enum import Enum
+from queue import Empty, Queue
+from threading import Thread
+from typing import Any, Callable,  Dict, List
 
 from pymongo import ASCENDING, MongoClient, ReplaceOne
 from pymongo.cursor import Cursor
@@ -16,16 +20,30 @@ from base.setting import SETTINGS
 from vnpy.trader.constant import Exchange, Interval
 from vnpy.trader.object import TickData, BarData
 
+
+class DatabaseEventType(Enum):
+    SAVE_BAR = 0,
+    LOAD_BAR = 1,
+    DELETE_BAR = 2
+
+class DatabaseEvent:
+    def __init__(self, type: DatabaseEventType, data: Any = None) -> None:
+        """"""
+        self.type: str = type
+        self.data: Any = data
+
 class MongoDatabase():
     """
     # Mongodb to save data.
-    ## Note:
-    ## 1. Auto attach store date to the collection name.
     """
     def __init__(self) -> None:
         super().__init__()
 
+        self.active: bool = False
+
         self.queue: Queue = Queue()
+        self.thread: Thread = Thread(target=self.run)
+        self.handlers: defaultdict = defaultdict(set)
 
         self.database: str = SETTINGS.get("database.database")
         self.host: str = SETTINGS.get("database.host",)
@@ -70,13 +88,43 @@ class MongoDatabase():
             unique=True
         )
 
-    def save_bar_data(
-        self,
-        bars: List[BarData]
-    ) -> bool:
+    def run(self) -> None:
+        while self.active:
+            try:
+                event: DatabaseEvent = self.queue.get(block=True, timeout=1)
+                self.process(event)
+            except Empty:
+                pass
+
+    def process(self, event: DatabaseEvent) -> None:
+        if event.type in self.handlers:
+            [handler[event] for handler in self.handlers[event.type]]
+
+    def register(self, type: DatabaseEventType, handler: Callable[[DatabaseEvent], None]):
+        handler_list: list = self.handlers[type]
+        if handler not in handler_list:
+            handler_list.append(handler)
+
+    def put(self, event: DatabaseEvent) -> None:
+        self.queue.put(event)
+
+    def start(self) -> None:
+        self.active = True
+        self.thread.start()
+
+    def stop(self) -> None:
+        self.active = False
+        self.thread.join()
+
+
+        
+
+    def process_save_bar_event(self,event: DatabaseEvent) -> bool:
         """
-        # Save bar data.
+        # Process save bar data event.
         """
+        bars: List[BarData] = event.data
+
         requests: List[ReplaceOne] = []
 
         for bar in bars:
@@ -108,15 +156,12 @@ class MongoDatabase():
         self.bar_collection.bulk_write(requests, ordered=False)
         return True
 
-    def load_bar_data(
-        self,
-        symbol: str,
-        start: str,
-        end: str
-    ) -> List[BarData]:
+    def load_bar_data(self, event: DatabaseEvent) -> List[BarData]:
         """
-        # Load bar data.
+        # Process load bar data event.
         """
+
+
         start: datetime = datetime.strptime(start, "%Y%m%d")
         end:datetime = datetime.strptime(end, "%Y%m%d")
 
@@ -171,111 +216,5 @@ class MongoDatabase():
         }
 
         result: DeleteResult = self.bar_collection.delete_many(filter)
-
-        return result.deleted_count
-
-    def save_tick_data(
-        self,
-        ticks: List[TickData]
-    )-> bool:
-        """
-        # Save tick data.
-        """
-        requests: List[ReplaceOne] = []
-
-        for tick in ticks:
-            filter: dict = {
-                "symbol": tick.symbol,
-                "datetime": tick.datetime,
-            }
-
-            d: dict = {
-                "symbol": tick.symbol,
-                "exchange": tick.exchange.value,
-                "datetime": tick.datetime,
-                "name": tick.name,
-                "volume": tick.volume,
-                "turnover": tick.turnover,
-                "open_interest": tick.open_interest,
-                "last_price": tick.last_price,
-                "last_volume": tick.last_volume,
-                "limit_up": tick.limit_up,
-                "limit_down": tick.limit_down,
-                "open_price": tick.open_price,
-                "high_price": tick.high_price,
-                "low_price": tick.low_price,
-                "pre_close": tick.pre_close,
-                "bid_price_1": tick.bid_price_1,
-                "bid_price_2": tick.bid_price_2,
-                "bid_price_3": tick.bid_price_3,
-                "bid_price_4": tick.bid_price_4,
-                "bid_price_5": tick.bid_price_5,
-                "ask_price_1": tick.ask_price_1,
-                "ask_price_2": tick.ask_price_2,
-                "ask_price_3": tick.ask_price_3,
-                "ask_price_4": tick.ask_price_4,
-                "ask_price_5": tick.ask_price_5,
-                "bid_volume_1": tick.bid_volume_1,
-                "bid_volume_2": tick.bid_volume_2,
-                "bid_volume_3": tick.bid_volume_3,
-                "bid_volume_4": tick.bid_volume_4,
-                "bid_volume_5": tick.bid_volume_5,
-                "ask_volume_1": tick.ask_volume_1,
-                "ask_volume_2": tick.ask_volume_2,
-                "ask_volume_3": tick.ask_volume_3,
-                "ask_volume_4": tick.ask_volume_4,
-                "ask_volume_5": tick.ask_volume_5,
-                "localtime": tick.localtime,
-            }
-
-            requests.append(ReplaceOne(filter, d, upsert=True))
-
-        self.tick_collection.bulk_write(requests, ordered=False)
-        return True
-
-    def load_tick_data(
-        self,
-        symbol: str,
-        start: str,
-        end: str
-    ) -> List[TickData]:
-        """
-        # Load tick data.
-        """
-        start: datetime = datetime.strptime(start, "%Y%m%d")
-        end:datetime = datetime.strptime(end, "%Y%m%d")
-
-        filter: dict = {
-            "symbol": symbol,
-            "datetime": {
-                "$gte": start.astimezone(timezone(get_localzone_name())),
-                "$lte": end.astimezone(timezone(get_localzone_name()))
-            }
-        }
-        c: Cursor = self.tick_collection.find(filter)
-
-        ticks: List[TickData] = []
-        for d in c:
-            d["exchange"] = Exchange(d["exchange"])
-            d["gateway_name"] = "DB"
-            d.pop("_id")
-
-            tick: TickData = TickData(**d)
-            ticks.append(tick)
-
-        return ticks
-
-    def delete_tick_data(
-        self,
-        symbol: str,
-    ) -> int:
-        """
-        # Delete tick data.
-        """
-        filter: dict = {
-            "symbol": symbol
-        }
-
-        result: DeleteResult = self.tick_collection.delete_many(filter)
 
         return result.deleted_count
