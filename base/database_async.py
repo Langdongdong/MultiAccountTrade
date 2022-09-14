@@ -1,6 +1,8 @@
 from abc import ABC
+import asyncio
 
 from datetime import datetime
+from threading import Thread
 from typing import Any, Dict, Iterable, List
 
 from base.setting import SETTINGS
@@ -62,13 +64,28 @@ class MongoDatabase(ABC):
             unique=True
         )
 
-    async def save_bar_data(self, bars: List[BarData]) -> bool:
+        self.queue: asyncio.Queue = asyncio.Queue()
+        self.thread: Thread = Thread(target=self.run)
+
+    async def run(self) -> None:
+        while True:
+            bars = await self.queue.get()
+
+            await self.process_save_bar_data(bars)
+
+            self.queue.task_done()
+
+    async def save_bar_data(self, bars: List[BarData]) -> None:
+        self.queue.put_nowait(bars)
+
+    async def process_save_bar_data(self, bars: List[BarData]) -> bool:
+        # self.queue.put(bars)
         requests: List[ReplaceOne] = []
         
         # make it a async iterator????
-        bars = aiter(bars)
+        # bars = aiter(bars)
 
-        async for bar in bars:
+        for bar in bars:
             filter: Dict[str, Any] = {
                 "symbol": bar.symbol,
                 "datetime": bar.datetime
@@ -168,6 +185,9 @@ class MongoDatabase(ABC):
 
         result = await self.bar_collection.delete_many(filter)
         return result.deleted_count
+
+    def close(self) -> None:
+        self.thread.join()
 
 class aiter(Iterable):
     def __init__(self, iterable: Iterable) -> None:

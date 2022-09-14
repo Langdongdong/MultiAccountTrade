@@ -128,6 +128,7 @@ class CtpEngine():
         ## Init basic modules.
         """
         self.add_module(LogModule)
+        self.add_module(AlgoModule)
 
     def add_gateway(self, gateway_class: Type[BaseGateway], gateway_name: str = "") -> BaseGateway:
         """
