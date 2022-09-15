@@ -1,4 +1,5 @@
 
+from concurrent.futures import Future, ThreadPoolExecutor
 import logging
 import traceback
 
@@ -119,6 +120,7 @@ class CtpEngine():
         self.bar_generators: Dict[str, BarGenerator] = {}
         self.database: MongoDatabase = MongoDatabase()
 
+        self.init_executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=1)
         self.strategies: Dict[str, StrategyTemplate] = {}
         self.orderid_strategy_map: Dict[str, StrategyTemplate] = {}
 
@@ -689,6 +691,99 @@ class CtpEngine():
         """"""
         return List(self.strategies.values())
 
+    def init_strategy(self, strategy_name: str) -> Future:
+        """
+        ## Init a strategy.
+        """
+        return self.init_executor.submit(self._init_strategy, strategy_name)
+
+    def _init_strategy(self, strategy_name: str) -> None:
+        """
+        ## Init strategies in queue.
+        """
+        strategy: StrategyTemplate = self.get_strategy(strategy_name)
+        if strategy:
+
+            if strategy.inited:
+                self.write_log(f"{strategy_name}已经完成初始化，禁止重复操作")
+                return
+
+            self.write_log(f"{strategy_name}开始执行初始化")
+
+            # Call on_init function of strategy
+            self.call_strategy_func(strategy, strategy.on_init)
+
+            # # Restore strategy data(variables)
+            # data: Optional[dict] = self.strategy_data.get(strategy_name, None)
+            # if data:
+            #     for name in strategy.variables:
+            #         value = data.get(name, None)
+            #         if value is not None:
+            #             setattr(strategy, name, value)
+
+            # Put event to update init completed status.
+            strategy.inited = True
+            self.write_log(f"{strategy_name}初始化完成")
+
+    def init_all_strategies(self) -> Dict[str, Future]:
+        """
+        ## Init all strategies.
+        """
+        futures: Dict[str, Future] = {}
+        for strategy_name in self.strategies.keys():
+            futures[strategy_name] = self.init_strategy(strategy_name)
+        return futures
+    
+    def start_strategy(self, strategy_name: str) -> None:
+        """
+        ## Start a strategy.
+        """
+        strategy: StrategyTemplate = self.get_strategy(strategy_name)
+        if strategy:
+
+            if not strategy.inited:
+                self.write_log(f"策略{strategy.name}启动失败，请先初始化")
+                return
+
+            if strategy.trading:
+                self.write_log(f"{strategy_name}已经启动，请勿重复操作")
+                return
+
+            self.call_strategy_func(strategy, strategy.on_start)
+            strategy.trading = True
+
+    def start_all_strategies(self) -> None:
+        """
+        ## Start all strategies.
+        """
+        for strategy_name in self.strategies.keys():
+            self.start_strategy(strategy_name)
+
+    def stop_strategy(self, strategy_name: str) -> None:
+        """
+        ## Stop a strategy.
+        """
+        strategy: StrategyTemplate = self.get_strategy(strategy_name)
+        if not strategy.trading:
+            return
+
+        # Call on_stop function of the strategy
+        self.call_strategy_func(strategy, strategy.on_stop)
+
+        # Change trading status of strategy to False
+        strategy.trading = False
+
+        # Cancel all orders of the strategy
+        for order in strategy.get_all_orders():
+            self.cancel_order(order.create_cancel_request(), order.gateway_name)
+
+    def stop_all_strategies(self) -> None:
+        """
+        ## Stop all strategy.
+        """
+        for strategy_name in self.strategies.keys():
+            self.stop_strategy(strategy_name)
+
     def call_strategy_func(
         self, strategy: StrategyTemplate, func: Callable, params: Any = None
     ) -> None:
@@ -729,10 +824,19 @@ class CtpEngine():
         strategy: StrategyTemplate = self.orderid_strategy_map.get(order.orderid, None)
         if not strategy:
             return
-        
-        self.call_strategy_func(strategy, strategy.on_order, order)
-        if not order.is_active():
+
+        if order.is_active():
+            # Update strategy orders dict.
+            if not strategy.get_order(order.orderid):
+                strategy.orders[order.orderid] = order
+        else:
+            # Update strategy orders dict.
+            strategy.orders.pop(order.orderid)
+
+            # Update orderid_strategy_map dict.
             self.orderid_strategy_map.pop(order.orderid)
+
+        self.call_strategy_func(strategy, strategy.on_order, order)
 
     def process_strategy_trade_event(self, trade: TradeData) -> None:
         strategy: StrategyTemplate = self.orderid_strategy_map.get(trade.orderid, None)
