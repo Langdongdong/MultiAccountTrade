@@ -1,5 +1,10 @@
+from glob import glob
+import importlib
+from pathlib import Path
 import sys
+from types import ModuleType
 sys.path.append(".")
+
 from dataclasses import dataclass
 from datetime import datetime, time, timedelta
 
@@ -16,55 +21,10 @@ import random
 import time
 
 
-async def worker(name, queue):
-    while True:
-        # Get a "work item" out of the queue.
-        sleep_for = await queue.get()
-
-        # Sleep for the "sleep_for" seconds.
-        await asyncio.sleep(sleep_for)
-
-        # Notify the queue that the "work item" has been processed.
-        queue.task_done()
-
-        print(f'{name} has slept for {sleep_for:.2f} seconds')
+from strategy.template import CtaTemplate
 
 
-async def main():
-    # Create a queue that we will use to store our "workload".
-    queue = asyncio.Queue()
-
-    # Generate random timings and put them into the queue.
-    total_sleep_time = 0
-    for _ in range(20):
-        sleep_for = random.uniform(0.05, 1.0)
-        total_sleep_time += sleep_for
-        queue.put_nowait(sleep_for)
-
-    # Create three worker tasks to process the queue concurrently.
-    tasks = []
-    for i in range(3):
-        task = asyncio.create_task(worker(f'worker-{i}', queue))
-        tasks.append(task)
-
-    # Wait until the queue is fully processed.
-    started_at = time.monotonic()
-    await queue.join()
-    total_slept_for = time.monotonic() - started_at
-
-    # Cancel our worker tasks.
-    # for task in tasks:
-    #     task.cancel()
-    # Wait until all worker tasks are cancelled.
-    # await asyncio.gather(*tasks, return_exceptions=True)
-
-    print('====')
-    print(f'3 workers slept in parallel for {total_slept_for:.2f} seconds')
-    print(f'total expected sleep time: {total_sleep_time:.2f} seconds')
-
-
-asyncio.run(main())
-# if __name__ == "__main__":
+if __name__ == "__main__":
     
 #     # mongo = MongoDatabase()
 #     # data = mongo.load_bar_data("au2212", datetime.strptime("20220904","%Y%m%d"),datetime.strptime("20220908","%Y%m%d"))
@@ -81,5 +41,19 @@ asyncio.run(main())
 #     # print(datetime.now() - timedelta(minutes=1))
 #     # print(datetime.now().tzinfo)
 #     # print(datetime.now() < datetime.now()+timedelta(minutes=1))
+    path = Path.cwd().joinpath("strategy")
 
-    
+    for suffix in ["py", "pyd", "so"]:
+        pathname: str = str(path.joinpath(f"*.{suffix}"))
+        for filepath in glob(pathname):
+            filename = Path(filepath).stem
+            module_name: str = f"{'strategy'}.{filename}"
+
+            module: ModuleType = importlib.import_module(module_name)
+            
+            importlib.reload(module)
+
+            for name in dir(module):
+                value = getattr(module, name)
+                if (isinstance(value, type) and issubclass(value, CtaTemplate) and value is not CtaTemplate):
+                    print(value)
