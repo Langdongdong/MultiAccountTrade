@@ -1,11 +1,13 @@
 
 import logging
+import traceback
 
 from abc import ABC
 from copy import copy
 from datetime import datetime, timedelta
+from mimetypes import inited
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Type
+from typing import Any, Callable, Dict, List, Optional, Sequence, Type
 
 from base.database import MongoDatabase
 from base.setting import SETTINGS
@@ -13,6 +15,7 @@ from base.setting import SETTINGS
 from vnpy.event import Event, EventEngine
 from vnpy.trader.gateway import BaseGateway
 from vnpy.trader.utility import BarGenerator
+from vnpy.trader.constant import Status
 
 from vnpy.trader.constant import (
     Direction,
@@ -46,6 +49,9 @@ from vnpy.trader.object import (
     SubscribeRequest,
 )
 
+from strategy.template import StrategyTemplate
+
+EVENT_BAR = "eBar"
 
 class CtpEngine():
     """
@@ -96,12 +102,13 @@ class CtpEngine():
         self.event_engine = EventEngine()
         self.event_engine.start()
 
-        self.modules: Dict[str, BaseModule] = {}
+        self.engines: Dict[str, BaseEngine] = {}
 
         self.exchanges: List[Exchange] = []
         self.gateways: Dict[str, BaseGateway] = {}
 
         self.ticks: Dict[str, TickData] = {}
+        self.bars: Dict[str, BarData] = {}
         self.orders: Dict[str, OrderData] = {}
         self.trades: Dict[str, TradeData] = {}
         self.accounts: Dict[str, AccountData] = {}
@@ -112,32 +119,30 @@ class CtpEngine():
         self.bar_generators: Dict[str, BarGenerator] = {}
         self.database: MongoDatabase = MongoDatabase()
 
+        self.strategies: Dict[str, StrategyTemplate] = {}
+        self.orderid_strategy_map: Dict[str, StrategyTemplate] = {}
+
         self.register_event()
-        self.init_modules()
+        self.init_engines()
 
-    def add_module(self, module_class: Any) -> "BaseModule":
+    def add_engine(self, engine_class: Any) -> "BaseEngine":
         """
-        ## Add function module.
+        ## Add function engine.
         """
-        module: BaseModule = module_class(self, self.event_engine)
-        self.modules[module.module_name] = module
-        return module
+        engine: BaseEngine = engine_class(self, self.event_engine)
+        self.engines[engine.engine_name] = engine
+        return engine
 
-    def init_modules(self) -> None:
+    def init_engines(self) -> None:
         """
-        ## Init basic modules.
+        ## Init basic engines.
         """
-        self.add_module(LogModule)
-        self.add_module(AlgoModule)
+        self.add_engine(LogEngine)
 
-    def add_gateway(self, gateway_class: Type[BaseGateway], gateway_name: str = "") -> BaseGateway:
+    def add_gateway(self, gateway_class: Type[BaseGateway], gateway_name: str) -> BaseGateway:
         """
         ## Add gateway.
         """
-        # Use default name if gateway_name not passed
-        if not gateway_name:
-            gateway_name: str = gateway_class.default_name
-  
         gateway: BaseGateway = gateway_class(self.event_engine, gateway_name)
         self.gateways[gateway_name] = gateway
 
@@ -165,14 +170,14 @@ class CtpEngine():
             self.write_log(f"Cannot get the gateway: {gateway_name}")
         return gateway
 
-    def get_module(self, module_name: str) -> "BaseModule":
+    def get_engine(self, engine_name: str) -> "BaseEngine":
         """
-        ## Return module object by name.
+        ## Return engine object by name.
         """
-        module: BaseModule = self.modules.get(module_name, None)
-        if not module:
-            self.write_log(f"Cannot get the module: {module_name}")
-        return module
+        engine: BaseEngine = self.engines.get(engine_name, None)
+        if not engine:
+            self.write_log(f"Cannot get the engine: {engine_name}")
+        return engine
 
     def get_gateway_default_setting(self, gateway_name: str) -> Optional[Dict[str, Any]]:
         """
@@ -249,17 +254,18 @@ class CtpEngine():
                     )
                     gateway.subscribe(req)
                 
-                self.bar_generators[symbol] = BarGenerator(self.process_bar_event)
+                self.bar_generators[symbol] = BarGenerator(self.callback_generate_bar)
 
     def send_order(
-        self, 
-        gateway_name: str, 
+        self,
+        strategy: StrategyTemplate,
+        gateway: BaseGateway,
         symbol: str, 
         volume: float, 
         direction: Direction, 
         offset: Offset,
         is_taker: bool,
-        price: float
+        price: float,
     ) -> List[str]:
         """
         ## Send new order request to a specific gateway.
@@ -286,17 +292,18 @@ class CtpEngine():
             offset = offset,
             type = OrderType.LIMIT
         )
-        reqs = self.convert_order_request(req)
+        reqs = self.convert_order_request(gateway.gateway_name, req)
         if not reqs:
-            return []
-
-        gateway = self.get_gateway(gateway_name)
-        if not gateway:
             return []
 
         orderids: List[str] = []
         for req in reqs:
-            orderids.append(gateway.send_order(req))
+            orderid = gateway.send_order(req)
+            orderids.append(orderid)
+
+            if strategy:
+                self.orderid_strategy_map[orderid] = strategy
+
         return orderids
 
     def convert_order_request(self, gateway_name: str, req: OrderRequest) -> List[OrderRequest]:
@@ -338,43 +345,59 @@ class CtpEngine():
 
     def buy(
         self, 
-        gateway_name: str, 
-        vt_symbol: str, 
+        gateway: BaseGateway, 
+        symbol: str, 
         volume: float, 
         is_taker: bool = True, 
-        price: float = 0
+        price: float = 0,
+        strategy: StrategyTemplate = None
     ) -> List[str]:
-        return self.send_order(gateway_name, vt_symbol, volume, Direction.LONG, Offset.OPEN, is_taker, price)
+        """
+        ## Send buy order to open a long position to a specific gateway.
+        """
+        return self.send_order(strategy, gateway, symbol, volume, Direction.LONG, Offset.OPEN, is_taker, price)
 
     def sell(
         self,
-        gateway_name: str, 
-        vt_symbol: str, 
+        gateway: BaseGateway, 
+        symbol: str, 
         volume: float, 
         is_taker: bool = True, 
-        price: float = 0
+        price: float = 0,
+        strategy: StrategyTemplate = None
     ) -> List[str]:
-        return self.send_order(gateway_name, vt_symbol, volume, Direction.SHORT, Offset.CLOSE, is_taker, price)
+        """
+        ## Send sell order to close a long position to a specific gateway.
+        """
+        return self.send_order(strategy, gateway, symbol, volume, Direction.SHORT, Offset.CLOSE, is_taker, price)
 
     def short(
         self,
-        gateway_name: str, 
-        vt_symbol: str, 
+        gateway: BaseGateway, 
+        symbol: str, 
         volume: float, 
         is_taker: bool = True, 
-        price: float = 0
+        price: float = 0,
+        strategy: StrategyTemplate = None
     ) -> List[str]:
-        return self.send_order(gateway_name, vt_symbol, volume, Direction.SHORT, Offset.OPEN, is_taker, price)
+        """
+        ## Send short order to open as short position to a specific gateway.
+        """
+        return self.send_order(strategy, gateway, symbol, volume, Direction.SHORT, Offset.OPEN, is_taker, price)
 
     def cover(
         self,
-        gateway_name: str, 
-        vt_symbol: str, 
+        gateway: BaseGateway, 
+        symbol: str, 
         volume: float, 
         is_taker: bool = True, 
-        price: float = 0
+        price: float = 0,
+        strategy: StrategyTemplate = None
     ) -> List[str]:
-        return self.send_order(gateway_name, vt_symbol, volume, Direction.LONG, Offset.CLOSE, is_taker, price)
+        """
+        ## Send cover order to close a short position to a specific gateway.
+        """
+        return self.send_order(strategy, gateway, symbol, volume, Direction.LONG, Offset.CLOSE, is_taker, price)
 
     def cancel_order(self, req: CancelRequest, gateway_name: str) -> None:
         """
@@ -432,19 +455,10 @@ class CtpEngine():
         self.event_engine.register(EVENT_ACCOUNT, self.process_account_event)
         self.event_engine.register(EVENT_CONTRACT, self.process_contract_event)
 
+        self.event_engine.register(EVENT_BAR, self.process_bar_event)
         self.event_engine.register(EVENT_TIMER, self.process_timer_event)
-
-    def process_timer_event(self, event: Event) -> None:
-        """
-        ## Process timer event.
-        # """
-        bars = [
-            bg.generate() 
-            for bg in self.get_all_bar_generators() 
-            if bg.bar and not self.bar_filter(bg.bar)
-        ]
         
-    def process_bar_event(self, bar: BarData) -> None:
+    def callback_generate_bar(self, bar: BarData) -> None:
         """
         ## Process bar event.
         """
@@ -452,12 +466,27 @@ class CtpEngine():
         contract: ContractData = self.get_contract(bar.symbol)
         tick: TickData = self.get_tick(bar.symbol)
         if contract and tick and tick.volume:
-            bar.avg_price = round((tick.turnover / (tick.volume * contract.size)), 2)
+            bar.avg_price = (tick.turnover / (tick.volume * contract.size))
 
-        # Save bar data to database.
-        if SETTINGS["database.active"]:
-            self.database.save_bar_data([bar])
+        # Put bar data to event engine.
+        event: Event = Event(EVENT_BAR, bar)
+        self.event_engine.put(event)
 
+    def process_timer_event(self, event: Event) -> None:
+        """
+        ## Process timer event.
+        """
+        # Force to generate bar data if too late to receive tick data.
+        bars = [
+            bg.generate() 
+            for bg in self.get_all_bar_generators() 
+            if bg.bar and not self.bar_filter(bg.bar)
+        ]
+
+        # Put bar data to event engine.
+        for bar in bars:
+            event: Event = Event(EVENT_BAR, bar)
+            self.event_engine.put(event)
 
     def process_tick_event(self, event: Event) -> None:
         """
@@ -467,9 +496,24 @@ class CtpEngine():
         if tick:
             self.ticks[tick.symbol] = tick
 
+            self.process_strategy_tick_event(tick)
+
             bar_generator: BarGenerator = self.get_bar_generator(tick.symbol)
             if bar_generator:
                 bar_generator.update_tick(tick)
+
+    def process_bar_event(self, event: Event) -> None:
+        """
+        ## Process bar event.
+        """
+        bar: BarData = event.data
+        self.bars[bar.symbol] = bar
+
+        self.process_strategy_bar_event(bar)
+
+        # Save bar data to database.
+        if SETTINGS["database.active"]:
+            self.database.save_bar_data([bar])
 
     def process_order_event(self, event: Event) -> None:
         """
@@ -483,12 +527,16 @@ class CtpEngine():
         elif order.orderid in self.active_orders:
             self.active_orders.pop(order.orderid)
 
+        self.process_strategy_order_event(order)
+
     def process_trade_event(self, event: Event) -> None:
         """
         ## Process trade event.
         """
         trade: TradeData = event.data
         self.trades[trade.tradeid] = trade
+
+        self.process_strategy_trade_event(trade)
 
     def process_position_event(self, event: Event) -> None:
         """
@@ -616,28 +664,99 @@ class CtpEngine():
         # Stop event engine first to prevent new timer event.
         self.event_engine.stop()
 
-        for module in self.modules.values():
-            module.close()
+        for engine in self.engines.values():
+            engine.close()
 
         for gateway in self.gateways.values():
             gateway.close()
 
 
-class BaseModule(ABC):
-    def __init__(self, ctp_engine: CtpEngine, evnet_engine: EventEngine, module_name: str) -> None:
+
+    def add_strategy(self, strategy_class: Type[StrategyTemplate], strategy_name: str = "") -> StrategyTemplate:
+        """"""
+        if not strategy_name:
+            strategy_name = strategy_class.__name__
+
+        strategy: StrategyTemplate = strategy_class(self, strategy_name)
+        self.strategies[strategy_name] = strategy
+        return strategy
+
+    def get_strategy(self, strategy_name: str) -> StrategyTemplate:
+        """"""
+        return self.strategies.get(strategy_name, None)
+
+    def get_all_strategies(self) -> List[StrategyTemplate]:
+        """"""
+        return List(self.strategies.values())
+
+    def call_strategy_func(
+        self, strategy: StrategyTemplate, func: Callable, params: Any = None
+    ) -> None:
+        """
+        Call function of a strategy and catch any exception raised.
+        """
+        try:
+            if params:
+                func(params)
+            else:
+                func()
+        except Exception:
+            strategy.trading = False
+            strategy.inited = False
+
+            msg: str = f"触发异常已停止\n{traceback.format_exc()}"
+            self.write_log(msg, strategy.name)
+
+    def process_strategy_tick_event(self, tick: TickData):
+        strategies: List[StrategyTemplate] = self.get_all_strategies()
+        if not strategies:
+            return
+
+        for strategy in strategies:
+            if strategy.inited:
+                self.call_strategy_func(strategy, strategy.on_tick, tick)
+
+    def process_strategy_bar_event(self, bar: BarData) -> None:
+        strategies: List[StrategyTemplate] = self.get_all_strategies()
+        if not strategies:
+            return
+
+        for strategy in strategies:
+            if strategy.inited:
+                self.call_strategy_func(strategy, strategy.on_bar, bar)
+
+    def process_strategy_order_event(self, order: OrderData) -> None:
+        strategy: StrategyTemplate = self.orderid_strategy_map.get(order.orderid, None)
+        if not strategy:
+            return
+        
+        self.call_strategy_func(strategy, strategy.on_order, order)
+        if not order.is_active():
+            self.orderid_strategy_map.pop(order.orderid)
+
+    def process_strategy_trade_event(self, trade: TradeData) -> None:
+        strategy: StrategyTemplate = self.orderid_strategy_map.get(trade.orderid, None)
+        if not strategy:
+            return
+        
+        self.call_strategy_func(strategy, strategy.on_trade, trade)
+
+
+class BaseEngine(ABC):
+    def __init__(self, ctp_engine: CtpEngine, evnet_engine: EventEngine, engine_name: str) -> None:
         """"""
         self.ctp_engine: CtpEngine = ctp_engine
         self.event_engine: EventEngine = evnet_engine
-        self.module_name: str = module_name
+        self.engine_name: str = engine_name
 
     def close(self) -> None:
         """"""
         pass
 
 
-class LogModule(BaseModule):
+class LogEngine(BaseEngine):
     """
-    # Processes log event and output with logging module.
+    # Processes log event and output with logging engine.
     """
     def __init__(self, ctp_engine: CtpEngine, evnet_engine: EventEngine) -> None:
         super().__init__(ctp_engine, evnet_engine, "log")
