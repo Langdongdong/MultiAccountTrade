@@ -120,7 +120,7 @@ class CtpEngine():
         self.bar_generators: Dict[str, BarGenerator] = {}
         self.database: MongoDatabase = MongoDatabase()
 
-        # self.thread_pool_executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=1)
+        self.thread_pool_executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=5)
         # self.strategies: Dict[str, Type[StrategyTemplate]] = {}
         # self.orderid_strategy_map: Dict[str, Type[StrategyTemplate]] = {}
 
@@ -258,10 +258,9 @@ class CtpEngine():
                 
                 self.bar_generators[symbol] = BarGenerator(self.callback_generate_bar)
 
-    def send_order(
+    def _send_order(
         self,
-        strategy: StrategyTemplate,
-        gateway: BaseGateway,
+        gateway_name: str,
         symbol: str, 
         volume: float, 
         direction: Direction, 
@@ -298,13 +297,14 @@ class CtpEngine():
         if not reqs:
             return []
 
+        gateway: BaseGateway = self.get_gateway(gateway_name)
+        if not gateway:
+            return []
+
         orderids: List[str] = []
         for req in reqs:
             orderid = gateway.send_order(req)
             orderids.append(orderid)
-
-            if strategy:
-                self.orderid_strategy_map[orderid] = strategy
 
         return orderids
 
@@ -347,67 +347,67 @@ class CtpEngine():
 
     def buy(
         self, 
-        gateway: BaseGateway, 
+        gateway_name: str, 
         symbol: str, 
         volume: float, 
         is_taker: bool = True, 
         price: float = 0,
-        strategy: StrategyTemplate = None
     ) -> List[str]:
         """
         ## Send buy order to open a long position to a specific gateway.
         """
-        return self.send_order(strategy, gateway, symbol, volume, Direction.LONG, Offset.OPEN, is_taker, price)
+        return self.thread_pool_executor.submit(self._send_order, gateway_name, symbol, volume, Direction.LONG, Offset.OPEN, is_taker, price).result()
 
     def sell(
         self,
-        gateway: BaseGateway, 
+        gateway_name: str,
         symbol: str, 
         volume: float, 
         is_taker: bool = True, 
         price: float = 0,
-        strategy: StrategyTemplate = None
     ) -> List[str]:
         """
         ## Send sell order to close a long position to a specific gateway.
         """
-        return self.send_order(strategy, gateway, symbol, volume, Direction.SHORT, Offset.CLOSE, is_taker, price)
+        return self.thread_pool_executor.submit(self._send_order, gateway_name, symbol, volume, Direction.SHORT, Offset.CLOSE, is_taker, price).result()
 
     def short(
         self,
-        gateway: BaseGateway, 
+        gateway_name: str,
         symbol: str, 
         volume: float, 
         is_taker: bool = True, 
         price: float = 0,
-        strategy: StrategyTemplate = None
     ) -> List[str]:
         """
         ## Send short order to open as short position to a specific gateway.
         """
-        return self.send_order(strategy, gateway, symbol, volume, Direction.SHORT, Offset.OPEN, is_taker, price)
+        return self.thread_pool_executor.submit(self._send_order, gateway_name, symbol, volume, Direction.SHORT, Offset.OPEN, is_taker, price).result()
 
     def cover(
         self,
-        gateway: BaseGateway, 
+        gateway_name: str,
         symbol: str, 
         volume: float, 
         is_taker: bool = True, 
         price: float = 0,
-        strategy: StrategyTemplate = None
     ) -> List[str]:
         """
         ## Send cover order to close a short position to a specific gateway.
         """
-        return self.send_order(strategy, gateway, symbol, volume, Direction.LONG, Offset.CLOSE, is_taker, price)
+        return self.thread_pool_executor.submit(self._send_order, gateway_name, symbol, volume, Direction.LONG, Offset.CLOSE, is_taker, price).result()
 
-    def cancel_order(self, req: CancelRequest, gateway_name: str) -> None:
+    def cancel_order(self, order: OrderData, gateway_name: str) -> None:
         """
         ## Send cancel order request to a specific gateway.
         """
+        self.thread_pool_executor(self._cancel_order, order, gateway_name)
+
+    def _cancel_order(self, order: OrderData, gateway_name: str) -> None:
+        """"""
         gateway: BaseGateway = self.get_gateway(gateway_name)
         if gateway:
-            gateway.cancel_order(req)
+            gateway.cancel_order(order.create_cancel_request())
 
     def tick_filter(self, tick: TickData) -> Optional[TickData]:
         """
