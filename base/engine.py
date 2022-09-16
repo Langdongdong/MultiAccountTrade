@@ -120,9 +120,9 @@ class CtpEngine():
         self.bar_generators: Dict[str, BarGenerator] = {}
         self.database: MongoDatabase = MongoDatabase()
 
-        self.init_executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=1)
-        self.strategies: Dict[str, StrategyTemplate] = {}
-        self.orderid_strategy_map: Dict[str, StrategyTemplate] = {}
+        self.thread_pool_executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=1)
+        self.strategies: Dict[str, Type[StrategyTemplate]] = {}
+        self.orderid_strategy_map: Dict[str, Type[StrategyTemplate]] = {}
 
         self.register_event()
         self.init_engines()
@@ -512,10 +512,11 @@ class CtpEngine():
         self.bars[bar.symbol] = bar
 
         self.process_strategy_bar_event(bar)
-
+        
         # Save bar data to database.
         if SETTINGS["database.active"]:
-            self.database.save_bar_data([bar])
+            self.thread_pool_executor.submit(self.database.save_bar_data, [bar])
+            # self.database.save_bar_data([bar])
 
     def process_order_event(self, event: Event) -> None:
         """
@@ -689,13 +690,13 @@ class CtpEngine():
 
     def get_all_strategies(self) -> List[StrategyTemplate]:
         """"""
-        return List(self.strategies.values())
+        return list(self.strategies.values())
 
     def init_strategy(self, strategy_name: str) -> Future:
         """
         ## Init a strategy.
         """
-        return self.init_executor.submit(self._init_strategy, strategy_name)
+        return self.thread_pool_executor.submit(self._init_strategy, strategy_name)
 
     def _init_strategy(self, strategy_name: str) -> None:
         """
