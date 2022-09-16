@@ -120,9 +120,9 @@ class CtpEngine():
         self.bar_generators: Dict[str, BarGenerator] = {}
         self.database: MongoDatabase = MongoDatabase()
 
-        self.thread_pool_executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=1)
-        self.strategies: Dict[str, Type[StrategyTemplate]] = {}
-        self.orderid_strategy_map: Dict[str, Type[StrategyTemplate]] = {}
+        # self.thread_pool_executor: ThreadPoolExecutor = ThreadPoolExecutor(max_workers=1)
+        # self.strategies: Dict[str, Type[StrategyTemplate]] = {}
+        # self.orderid_strategy_map: Dict[str, Type[StrategyTemplate]] = {}
 
         self.register_event()
         self.init_engines()
@@ -498,7 +498,7 @@ class CtpEngine():
         if tick:
             self.ticks[tick.symbol] = tick
 
-            self.process_strategy_tick_event(tick)
+            # self.process_strategy_tick_event(tick)
 
             bar_generator: BarGenerator = self.get_bar_generator(tick.symbol)
             if bar_generator:
@@ -511,7 +511,7 @@ class CtpEngine():
         bar: BarData = event.data
         self.bars[bar.symbol] = bar
 
-        self.process_strategy_bar_event(bar)
+        # self.process_strategy_bar_event(bar)
         
         # Save bar data to database.
         if SETTINGS["database.active"]:
@@ -530,7 +530,7 @@ class CtpEngine():
         elif order.orderid in self.active_orders:
             self.active_orders.pop(order.orderid)
 
-        self.process_strategy_order_event(order)
+        # self.process_strategy_order_event(order)
 
     def process_trade_event(self, event: Event) -> None:
         """
@@ -539,7 +539,7 @@ class CtpEngine():
         trade: TradeData = event.data
         self.trades[trade.tradeid] = trade
 
-        self.process_strategy_trade_event(trade)
+        # self.process_strategy_trade_event(trade)
 
     def process_position_event(self, event: Event) -> None:
         """
@@ -675,176 +675,176 @@ class CtpEngine():
 
 
 
-    def add_strategy(self, strategy_class: Type[StrategyTemplate], strategy_name: str = "") -> StrategyTemplate:
-        """"""
-        if not strategy_name:
-            strategy_name = strategy_class.__name__
+    # def add_strategy(self, strategy_class: Type[StrategyTemplate], strategy_name: str = "") -> StrategyTemplate:
+    #     """"""
+    #     if not strategy_name:
+    #         strategy_name = strategy_class.__name__
 
-        strategy: StrategyTemplate = strategy_class(self, strategy_name)
-        self.strategies[strategy_name] = strategy
-        return strategy
+    #     strategy: StrategyTemplate = strategy_class(self, strategy_name)
+    #     self.strategies[strategy_name] = strategy
+    #     return strategy
 
-    def get_strategy(self, strategy_name: str) -> StrategyTemplate:
-        """"""
-        return self.strategies.get(strategy_name, None)
+    # def get_strategy(self, strategy_name: str) -> StrategyTemplate:
+    #     """"""
+    #     return self.strategies.get(strategy_name, None)
 
-    def get_all_strategies(self) -> List[StrategyTemplate]:
-        """"""
-        return list(self.strategies.values())
+    # def get_all_strategies(self) -> List[StrategyTemplate]:
+    #     """"""
+    #     return list(self.strategies.values())
 
-    def init_strategy(self, strategy_name: str) -> Future:
-        """
-        ## Init a strategy.
-        """
-        return self.thread_pool_executor.submit(self._init_strategy, strategy_name)
+    # def init_strategy(self, strategy_name: str) -> Future:
+    #     """
+    #     ## Init a strategy.
+    #     """
+    #     return self.thread_pool_executor.submit(self._init_strategy, strategy_name)
 
-    def _init_strategy(self, strategy_name: str) -> None:
-        """
-        ## Init strategies in queue.
-        """
-        strategy: StrategyTemplate = self.get_strategy(strategy_name)
-        if strategy:
+    # def _init_strategy(self, strategy_name: str) -> None:
+    #     """
+    #     ## Init strategies in queue.
+    #     """
+    #     strategy: StrategyTemplate = self.get_strategy(strategy_name)
+    #     if strategy:
 
-            if strategy.inited:
-                self.write_log(f"{strategy_name}已经完成初始化，禁止重复操作")
-                return
+    #         if strategy.inited:
+    #             self.write_log(f"{strategy_name}已经完成初始化，禁止重复操作")
+    #             return
 
-            self.write_log(f"{strategy_name}开始执行初始化")
+    #         self.write_log(f"{strategy_name}开始执行初始化")
 
-            # Call on_init function of strategy
-            self.call_strategy_func(strategy, strategy.on_init)
+    #         # Call on_init function of strategy
+    #         self.call_strategy_func(strategy, strategy.on_init)
 
-            # # Restore strategy data(variables)
-            # data: Optional[dict] = self.strategy_data.get(strategy_name, None)
-            # if data:
-            #     for name in strategy.variables:
-            #         value = data.get(name, None)
-            #         if value is not None:
-            #             setattr(strategy, name, value)
+    #         # # Restore strategy data(variables)
+    #         # data: Optional[dict] = self.strategy_data.get(strategy_name, None)
+    #         # if data:
+    #         #     for name in strategy.variables:
+    #         #         value = data.get(name, None)
+    #         #         if value is not None:
+    #         #             setattr(strategy, name, value)
 
-            # Put event to update init completed status.
-            strategy.inited = True
-            self.write_log(f"{strategy_name}初始化完成")
+    #         # Put event to update init completed status.
+    #         strategy.inited = True
+    #         self.write_log(f"{strategy_name}初始化完成")
 
-    def init_all_strategies(self) -> Dict[str, Future]:
-        """
-        ## Init all strategies.
-        """
-        futures: Dict[str, Future] = {}
-        for strategy_name in self.strategies.keys():
-            futures[strategy_name] = self.init_strategy(strategy_name)
-        return futures
+    # def init_all_strategies(self) -> Dict[str, Future]:
+    #     """
+    #     ## Init all strategies.
+    #     """
+    #     futures: Dict[str, Future] = {}
+    #     for strategy_name in self.strategies.keys():
+    #         futures[strategy_name] = self.init_strategy(strategy_name)
+    #     return futures
     
-    def start_strategy(self, strategy_name: str) -> None:
-        """
-        ## Start a strategy.
-        """
-        strategy: StrategyTemplate = self.get_strategy(strategy_name)
-        if strategy:
+    # def start_strategy(self, strategy_name: str) -> None:
+    #     """
+    #     ## Start a strategy.
+    #     """
+    #     strategy: StrategyTemplate = self.get_strategy(strategy_name)
+    #     if strategy:
 
-            if not strategy.inited:
-                self.write_log(f"策略{strategy.name}启动失败，请先初始化")
-                return
+    #         if not strategy.inited:
+    #             self.write_log(f"策略{strategy.name}启动失败，请先初始化")
+    #             return
 
-            if strategy.trading:
-                self.write_log(f"{strategy_name}已经启动，请勿重复操作")
-                return
+    #         if strategy.trading:
+    #             self.write_log(f"{strategy_name}已经启动，请勿重复操作")
+    #             return
 
-            self.call_strategy_func(strategy, strategy.on_start)
-            strategy.trading = True
+    #         self.call_strategy_func(strategy, strategy.on_start)
+    #         strategy.trading = True
 
-    def start_all_strategies(self) -> None:
-        """
-        ## Start all strategies.
-        """
-        for strategy_name in self.strategies.keys():
-            self.start_strategy(strategy_name)
+    # def start_all_strategies(self) -> None:
+    #     """
+    #     ## Start all strategies.
+    #     """
+    #     for strategy_name in self.strategies.keys():
+    #         self.start_strategy(strategy_name)
 
-    def stop_strategy(self, strategy_name: str) -> None:
-        """
-        ## Stop a strategy.
-        """
-        strategy: StrategyTemplate = self.get_strategy(strategy_name)
-        if not strategy.trading:
-            return
+    # def stop_strategy(self, strategy_name: str) -> None:
+    #     """
+    #     ## Stop a strategy.
+    #     """
+    #     strategy: StrategyTemplate = self.get_strategy(strategy_name)
+    #     if not strategy.trading:
+    #         return
 
-        # Call on_stop function of the strategy
-        self.call_strategy_func(strategy, strategy.on_stop)
+    #     # Call on_stop function of the strategy
+    #     self.call_strategy_func(strategy, strategy.on_stop)
 
-        # Change trading status of strategy to False
-        strategy.trading = False
+    #     # Change trading status of strategy to False
+    #     strategy.trading = False
 
-        # Cancel all orders of the strategy
-        for order in strategy.get_all_orders():
-            self.cancel_order(order.create_cancel_request(), order.gateway_name)
+    #     # Cancel all orders of the strategy
+    #     for order in strategy.get_all_orders():
+    #         self.cancel_order(order.create_cancel_request(), order.gateway_name)
 
-    def stop_all_strategies(self) -> None:
-        """
-        ## Stop all strategy.
-        """
-        for strategy_name in self.strategies.keys():
-            self.stop_strategy(strategy_name)
+    # def stop_all_strategies(self) -> None:
+    #     """
+    #     ## Stop all strategy.
+    #     """
+    #     for strategy_name in self.strategies.keys():
+    #         self.stop_strategy(strategy_name)
 
-    def call_strategy_func(
-        self, strategy: StrategyTemplate, func: Callable, params: Any = None
-    ) -> None:
-        """
-        Call function of a strategy and catch any exception raised.
-        """
-        try:
-            if params:
-                func(params)
-            else:
-                func()
-        except Exception:
-            strategy.trading = False
-            strategy.inited = False
+    # def call_strategy_func(
+    #     self, strategy: StrategyTemplate, func: Callable, params: Any = None
+    # ) -> None:
+    #     """
+    #     Call function of a strategy and catch any exception raised.
+    #     """
+    #     try:
+    #         if params:
+    #             func(params)
+    #         else:
+    #             func()
+    #     except Exception:
+    #         strategy.trading = False
+    #         strategy.inited = False
 
-            msg: str = f"触发异常已停止\n{traceback.format_exc()}"
-            self.write_log(msg, strategy.name)
+    #         msg: str = f"触发异常已停止\n{traceback.format_exc()}"
+    #         self.write_log(msg, strategy.name)
 
-    def process_strategy_tick_event(self, tick: TickData):
-        strategies: List[StrategyTemplate] = self.get_all_strategies()
-        if not strategies:
-            return
+    # def process_strategy_tick_event(self, tick: TickData):
+    #     strategies: List[StrategyTemplate] = self.get_all_strategies()
+    #     if not strategies:
+    #         return
 
-        for strategy in strategies:
-            if strategy.inited:
-                self.call_strategy_func(strategy, strategy.on_tick, tick)
+    #     for strategy in strategies:
+    #         if strategy.inited:
+    #             self.call_strategy_func(strategy, strategy.on_tick, tick)
 
-    def process_strategy_bar_event(self, bar: BarData) -> None:
-        strategies: List[StrategyTemplate] = self.get_all_strategies()
-        if not strategies:
-            return
+    # def process_strategy_bar_event(self, bar: BarData) -> None:
+    #     strategies: List[StrategyTemplate] = self.get_all_strategies()
+    #     if not strategies:
+    #         return
 
-        for strategy in strategies:
-            if strategy.inited:
-                self.call_strategy_func(strategy, strategy.on_bar, bar)
+    #     for strategy in strategies:
+    #         if strategy.inited:
+    #             self.call_strategy_func(strategy, strategy.on_bar, bar)
 
-    def process_strategy_order_event(self, order: OrderData) -> None:
-        strategy: StrategyTemplate = self.orderid_strategy_map.get(order.orderid, None)
-        if not strategy:
-            return
+    # def process_strategy_order_event(self, order: OrderData) -> None:
+    #     strategy: StrategyTemplate = self.orderid_strategy_map.get(order.orderid, None)
+    #     if not strategy:
+    #         return
 
-        if order.is_active():
-            # Update strategy orders dict.
-            if not strategy.get_order(order.orderid):
-                strategy.orders[order.orderid] = order
-        else:
-            # Update strategy orders dict.
-            strategy.orders.pop(order.orderid)
+    #     if order.is_active():
+    #         # Update strategy orders dict.
+    #         if not strategy.get_order(order.orderid):
+    #             strategy.orders[order.orderid] = order
+    #     else:
+    #         # Update strategy orders dict.
+    #         strategy.orders.pop(order.orderid)
 
-            # Update orderid_strategy_map dict.
-            self.orderid_strategy_map.pop(order.orderid)
+    #         # Update orderid_strategy_map dict.
+    #         self.orderid_strategy_map.pop(order.orderid)
 
-        self.call_strategy_func(strategy, strategy.on_order, order)
+    #     self.call_strategy_func(strategy, strategy.on_order, order)
 
-    def process_strategy_trade_event(self, trade: TradeData) -> None:
-        strategy: StrategyTemplate = self.orderid_strategy_map.get(trade.orderid, None)
-        if not strategy:
-            return
+    # def process_strategy_trade_event(self, trade: TradeData) -> None:
+    #     strategy: StrategyTemplate = self.orderid_strategy_map.get(trade.orderid, None)
+    #     if not strategy:
+    #         return
         
-        self.call_strategy_func(strategy, strategy.on_trade, trade)
+    #     self.call_strategy_func(strategy, strategy.on_trade, trade)
 
 
 class BaseEngine(ABC):
