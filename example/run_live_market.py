@@ -39,4 +39,4 @@ if __name__ == "__main__":
 
         sleep(60)
 
-        ctp_engine.write_log(len([bg for bg in ctp_engine.get_all_bar_generators() if bg.bar]))
+        # ctp_engine.write_log(len([bg for bg in ctp_engine.get_all_bar_generators() if bg.bar]))

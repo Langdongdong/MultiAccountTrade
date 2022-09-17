@@ -77,6 +77,7 @@ class MongoDatabase():
         """
         # Save bar data.
         """
+        print(datetime.now(), bars)
         requests: List[ReplaceOne] = []
 
         for bar in bars:
